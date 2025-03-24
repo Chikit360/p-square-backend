@@ -24,7 +24,7 @@ medicineController.getAllMedicines = async (req, res) => {
       // Fetch medicines in descending order based on createdAt or updatedAt
       const medicines = await Medicine.find().sort({ createdAt: -1 });
   
-      res.status(200).json({ medicines });
+      res.status(200).json({ data:medicines });
     } catch (error) {
       console.error('Error fetching medicines:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -253,7 +253,7 @@ medicineController.getAvailableMedicines = async (req, res) => {
       const totalMedicines = await Medicine.countDocuments(filter);
   
       res.status(200).json({
-        medicines,
+        data:medicines,
         totalMedicines,
         currentPage: parseInt(page),
         totalPages: Math.ceil(totalMedicines / limit),

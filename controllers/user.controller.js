@@ -22,8 +22,8 @@ userController.login = async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '5h' });
-
-    res.status(200).json({ token });
+    
+    res.status(200).json({data:user, token });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -37,7 +37,7 @@ userController.getCurrentUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.status(200).json(user);
+    res.status(200).json({data:user});
   } catch (error) {
     console.error('Error fetching user info:', error);
     res.status(500).json({ message: 'Internal server error' });

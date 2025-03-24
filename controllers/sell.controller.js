@@ -70,7 +70,17 @@ sellController.getAllSales = async (req, res) => {
         }
       },
       {
-        $sort: { "_id.year": 1, "_id.month": 1 }
+        $set: {
+          sales: {
+            $sortArray: {
+              input: "$sales",
+              sortBy: { createdAt: -1 }
+            }
+          }
+        }
+      },
+      {
+        $sort: { "_id.year": -1, "_id.month": -1 }
       },
       {
         $project: {
@@ -89,6 +99,7 @@ sellController.getAllSales = async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 
 module.exports = sellController;

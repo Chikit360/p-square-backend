@@ -27,6 +27,9 @@ router.patch('/:id/quantity', medicineController.updateMedicineQuantity);
 // Read all medicines
 router.get('/', medicineController.getAllMedicines);
 
+// ative available medicine 
+router.get('/active', medicineController.getAvailableMedicines);
+
 // Read medicine by ID
 router.get('/:id', medicineController.getMedicineById);
 
