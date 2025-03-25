@@ -77,11 +77,6 @@ const medicineSchema = new mongoose.Schema({
     required: true,
   },
 
-  // Expiry date after which the medicine is no longer usable
-  expiryDate: {
-    type: Date,
-    required: true,
-  },
 
   // Maximum Retail Price (MRP) for the medicine
   mrp: {
@@ -99,13 +94,6 @@ const medicineSchema = new mongoose.Schema({
   sellingPrice: {
     type: Number,
     required: true,
-  },
-
-  // Current stock level of the medicine
-  quantityInStock: {
-    type: Number,
-    required: true,
-    default: 0,
   },
 
   // Minimum quantity that should be kept in inventory
@@ -138,6 +126,7 @@ const medicineSchema = new mongoose.Schema({
     default: 'active',
   },
 }, { timestamps: true }); // Adds createdAt and updatedAt timestamps automatically
+
 
 const Medicine = mongoose.model('Medicine', medicineSchema);
 module.exports = Medicine;

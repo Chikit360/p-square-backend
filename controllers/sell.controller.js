@@ -1,39 +1,57 @@
 const Sell = require('../models/sellModel');
 const Medicine = require('../models/medicineModel');
+const Stock = require('../models/stock.model');
+const { sendResponse } = require('../middlewares/utils/response.formatter');
 
 const sellController = {};
 
-// Create a new sale
+// Create a new sale with FIFO stock management
 sellController.createSale = async (req, res) => {
   try {
     const { customerName, customerContact, items } = req.body;
 
     if (!items || items.length === 0) {
-      return res.status(400).json({ message: 'No items provided for sale' });
+      return sendResponse(res, { status: 400, message: 'No items provided for sale' });
     }
 
     let totalAmount = 0;
+    const updatedStock = [];
 
-    // Validate and calculate total amount
     for (const item of items) {
       const medicine = await Medicine.findById(item.medicineId);
       if (!medicine) {
-        return res.status(404).json({ message: `Medicine not found with ID: ${item.medicineId}` });
+        return sendResponse(res, { status: 404, message: `Medicine not found with ID: ${item.medicineId}` });
       }
 
-      if (medicine.quantityInStock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for medicine: ${medicine.name}` });
+      // Fetch stock in FIFO order (earliest expiry first)
+      const stocks = await Stock.find({ medicineId: item.medicineId }).sort({ expiryDate: 1 });
+
+      let remainingQuantity = item.quantity;
+      let itemTotal = 0;
+
+      for (const stock of stocks) {
+        if (remainingQuantity === 0) break;
+
+        if (stock.quantity <= remainingQuantity) {
+          remainingQuantity -= stock.quantity;
+          itemTotal += stock.quantity * medicine.sellingPrice;
+          await Stock.findByIdAndDelete(stock._id); // Delete exhausted stock
+        } else {
+          stock.quantity -= remainingQuantity;
+          itemTotal += remainingQuantity * medicine.sellingPrice;
+          await stock.save();
+          remainingQuantity = 0;
+        }
       }
 
-      const itemTotal = medicine.sellingPrice * item.quantity;
+      if (remainingQuantity > 0) {
+        return sendResponse(res, { status: 400, message: `Insufficient stock for medicine: ${medicine.name}` });
+      }
+
       totalAmount += itemTotal;
       item.name = medicine.name;
       item.price = medicine.sellingPrice;
       item.total = itemTotal;
-
-      // Update stock
-      medicine.quantityInStock -= item.quantity;
-      await medicine.save();
     }
 
     const invoiceId = `INV-${Date.now()}`;
@@ -47,15 +65,15 @@ sellController.createSale = async (req, res) => {
     });
 
     await newSale.save();
+    return sendResponse(res, { status: 201, message: 'Sale created successfully', sale: newSale });
 
-    res.status(201).json({ message: 'Sale created successfully', sale: newSale });
   } catch (error) {
     console.error('Error creating sale:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return sendResponse(res, { status: 500, message: 'Internal server error', error: process.env.NODE_ENV === 'production' ? undefined : error.message });
   }
 };
 
-// Get all sales with total amount
+// Get all sales with total amount per month
 sellController.getAllSales = async (req, res) => {
   try {
     const salesData = await Sell.aggregate([
@@ -93,13 +111,11 @@ sellController.getAllSales = async (req, res) => {
       }
     ]);
 
-    res.status(200).json(salesData);
+    return sendResponse(res, { status: 200, data: salesData });
   } catch (error) {
     console.error('Error fetching sales:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return sendResponse(res, { status: 500, message: 'Internal server error', error: process.env.NODE_ENV === 'production' ? undefined : error.message });
   }
 };
-
-
 
 module.exports = sellController;

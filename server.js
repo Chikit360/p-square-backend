@@ -11,6 +11,7 @@ const passportJWT = require('./config/passport-jwt');
 const userRouter = require('./routes/user.router');
 const medicineRouter = require('./routes/medicine.router');
 const sellRouter = require('./routes/sell.router');
+const stockRouter = require('./routes/stock.router');
 const authMiddleware = require('./middlewares/auth.middleware');
 const errorMiddleware = require('./middlewares/error.middleware');
 
@@ -24,6 +25,7 @@ app.use(cors());
 
 // Middleware for parsing JSON bodies
 app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Enable File Uploads
 app.use(fileUpload());
@@ -65,6 +67,8 @@ app.use('/medicines', authMiddleware.verifyToken, medicineRouter);
 
 
 app.use('/sells', authMiddleware.verifyToken, sellRouter);
+
+app.use('/stock', authMiddleware.verifyToken, stockRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);

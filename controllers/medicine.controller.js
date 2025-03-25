@@ -1,20 +1,50 @@
 // medicineController.js
+const { sendResponse } = require('../middlewares/utils/response.formatter');
 const Medicine = require('../models/medicineModel');
+const Stock = require('../models/stock.model');
 
 const medicineController = {};
 
 // Create a new medicine
 medicineController.createMedicine = async (req, res) => {
+    const session = await Medicine.startSession();
     try {
-        // we can pass body because mongoose handle the required fields error 
-        const newMedicine = new Medicine(req.body);
-        await newMedicine.save();
-        res.status(201).json({ message: 'Medicine created successfully', medicine: newMedicine });
+      session.startTransaction();
+  
+      console.log('Request Body:', req.body);
+  
+      // Create Medicine using Transaction
+      const newMedicine = await Medicine.create([req.body], { session });
+      const { quantityInStock, expiryDate } = req.body;
+  
+      if (!quantityInStock || !expiryDate) {
+        throw new Error('Quantity and Expiry Date are required for stock creation.');
+      }
+  
+      // Create Stock Entry
+      await Stock.create(
+        [
+          {
+            medicineId: newMedicine[0]._id,
+            quantity:quantityInStock,
+            expiryDate,
+          },
+        ],
+        { session }
+      );
+  
+      await session.commitTransaction();
+      res.status(201).json({ message: 'Medicine created successfully', medicine: newMedicine[0] });
+  
     } catch (error) {
-        console.error('Error creating medicine:', error);
-        res.status(500).json({ message: 'Internal server error' });
+      await session.abortTransaction();
+      console.error('Error creating medicine:', error);
+      res.status(500).json({ message: error.message || 'Internal server error' });
+    } finally {
+      session.endSession();
     }
-};
+  };
+  
 
 // Read all medicines
 medicineController.getAllMedicines = async (req, res) => {
@@ -86,21 +116,27 @@ medicineController.deleteMedicineById = async (req, res) => {
 // Search Medicines
 medicineController.searchMedicines = async (req, res) => {
     try {
-        const { q } = req.query;
-        console.log(q)
-        const medicines = await Medicine.find({
+      const { q } = req.query;
+  
+      const query = q
+        ? {
             $or: [
-                { name: { $regex: q, $options: 'i' } },
-                { category: { $regex: q, $options: 'i' } },
-                // { supplier: { $regex: q, $options: 'i' } },
+              { name: { $regex: q, $options: 'i' } },
+              { category: { $regex: q, $options: 'i' } },
             ],
-        });
-        res.status(200).json({ medicines });
+          }
+        : {};
+  
+      const medicines = await Medicine.find(query);
+  
+      return sendResponse(res,{data:medicines,status:200})
     } catch (error) {
-        console.error('Error searching medicines:', error);
-        res.status(500).json({ message: 'Internal server error' });
+      console.error('Error searching medicines:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
-};
+  };
+  
+
 
 // Filter Medicines
 medicineController.filterMedicines = async (req, res) => {
