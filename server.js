@@ -10,8 +10,8 @@ const helmet = require('helmet');
 const passportJWT = require('./config/passport-jwt');
 const userRouter = require('./routes/user.router');
 const medicineRouter = require('./routes/medicine.router');
-const sellRouter = require('./routes/sell.router');
 const stockRouter = require('./routes/stock.router');
+const inventoryRouter = require('./routes/inventory.router');
 const authMiddleware = require('./middlewares/auth.middleware');
 const errorMiddleware = require('./middlewares/error.middleware');
 
@@ -66,9 +66,9 @@ app.use('/users', userRouter);
 app.use('/medicines', authMiddleware.verifyToken, medicineRouter);
 
 
-app.use('/sells', authMiddleware.verifyToken, sellRouter);
+app.use('/stocks', authMiddleware.verifyToken, stockRouter);
 
-app.use('/stock', authMiddleware.verifyToken, stockRouter);
+app.use('/inventories', authMiddleware.verifyToken, inventoryRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);

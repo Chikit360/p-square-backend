@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const sellSchema = new mongoose.Schema({
+const stockSchema = new mongoose.Schema({
   invoiceId: {
     type: String,
     required: true,
@@ -45,5 +45,5 @@ const sellSchema = new mongoose.Schema({
   },
 });
 
-const Sell = mongoose.model('Sell', sellSchema);
-module.exports = Sell;
+const Stock = mongoose.model('Stock', stockSchema);
+module.exports = Stock;

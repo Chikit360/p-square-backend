@@ -1,132 +1,113 @@
 const mongoose = require('mongoose');
 
-// Define possible values using enums
-const FORM_ENUM = ['tablet', 'capsule', 'syrup', 'injection', 'ointment'];
-const STRENGTH_ENUM = ['100 mg', '250 mg', '500 mg', '1 g', '2 g'];
-const UNIT_ENUM = ['pieces', 'boxes', 'bottles', 'packs', 'strips'];
-
+/**
+ * Medicine Schema
+ * Defines the structure for storing medicine-related information in the database.
+ */
 const medicineSchema = new mongoose.Schema({
-  // A unique identifier for each medicine
-  medicineId: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-
-  // The brand or generic name of the medicine
+  /**
+   * Name of the medicine.
+   * Required: Yes
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
   name: {
     type: String,
     required: true,
+    trim: true
   },
-
-  // The scientific name of the medicine
-  genericName: {
-    type: String,
-    required: true,
-  },
-
-  // The name of the manufacturer producing the medicine
+  /**
+   * Manufacturer of the medicine.
+   * Required: No
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
   manufacturer: {
     type: String,
-    required: true,
+    trim: true
   },
-
-  // Reference to the supplier (Supplier ID) from whom the medicine is purchased
-  // supplierId: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: 'Supplier',
-  //   required: true,
-  // },
-
-  // Classification of medicine (e.g., antibiotic, analgesic, etc.)
+  /**
+   * Category of the medicine (e.g., antibiotic, analgesic).
+   * Required: No
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
   category: {
     type: String,
-    required: true,
+    trim: true
   },
-
-  // Form of the medicine (restricted to specific forms using enum)
+  /**
+   * Form of the medicine (e.g., tablet, capsule).
+   * Required: No
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
   form: {
     type: String,
-    enum: FORM_ENUM,
-    required: true,
+    trim: true
   },
-
-  // Dosage strength (restricted using enum)
+  /**
+   * Strength of the medicine (e.g., 500 mg).
+   * Required: No
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
   strength: {
     type: String,
-    enum: STRENGTH_ENUM,
-    required: true,
+    trim: true
   },
-
-  // Unit of measurement (restricted using enum)
+  /**
+   * Unit of measurement (e.g., pieces, bottles).
+   * Required: No
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
   unit: {
     type: String,
-    enum: UNIT_ENUM,
-    required: true,
+    trim: true
   },
-
-  // The batch number of the medicine
-  batchNumber: {
-    type: String,
-    required: true,
-  },
-
-  // Date the medicine was manufactured
-  manufactureDate: {
-    type: Date,
-    required: true,
-  },
-
-
-  // Maximum Retail Price (MRP) for the medicine
-  mrp: {
-    type: Number,
-    required: true,
-  },
-
-  // The price at which the medicine was purchased
-  purchasePrice: {
-    type: Number,
-    required: true,
-  },
-
-  // The price at which the medicine is sold to customers
-  sellingPrice: {
-    type: Number,
-    required: true,
-  },
-
-  // Minimum quantity that should be kept in inventory
-  minimumStockLevel: {
-    type: Number,
-    required: true,
-  },
-
-  // Shelf location within the pharmacy for storage
-  shelfLocation: {
-    type: String,
-    required: true,
-  },
-
-  // Indicates whether a prescription is required to dispense the medicine
+  /**
+   * Indicates if a prescription is required to dispense the medicine.
+   * Required: No
+   * Type: Boolean
+   * Default: false
+   */
   prescriptionRequired: {
     type: Boolean,
-    required: true,
+    default: false
   },
-
-  // Additional notes or warnings about the medicine
+  /**
+   * Additional notes or information about the medicine.
+   * Required: No
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
   notes: {
     type: String,
+    trim: true
   },
-
-  // Status of the medicine (active or inactive)
+  /**
+   * Status of the medicine's availability.
+   * Required: No
+   * Type: String
+   * Enum: ['Active', 'Inactive']
+   * Default: 'Active'
+   */
   status: {
     type: String,
     enum: ['active', 'inactive'],
-    default: 'active',
-  },
-}, { timestamps: true }); // Adds createdAt and updatedAt timestamps automatically
+    default: 'Active'
+  }
+}, {
+  /**
+   * Automatically adds `createdAt` and `updatedAt` timestamps to the schema.
+   */
+  timestamps: true
+});
 
-
+/**
+ * Medicine Model
+ * Represents the 'Medicine' collection in the database.
+ */
 const Medicine = mongoose.model('Medicine', medicineSchema);
 module.exports = Medicine;

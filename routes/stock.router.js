@@ -1,13 +1,13 @@
-// routes/stockRoutes.ts
 const express = require('express');
 const stockController = require('../controllers/stock.controller');
+const authMiddleware = require('../middlewares/auth.middleware'); // Import auth middleware
+
 const stockRouter = express.Router();
 
-// Add Stock
-stockRouter.post('/', stockController.addOrUpdateStock);
+// Create a sale
+stockRouter.post('/', authMiddleware.verifyToken, stockController.createSale);
 
-// Get All Stock Details (Grouped by Medicine ID)
-stockRouter.get('/', stockController.getAllStockDetails);
-
+// Get all sales with total amount
+stockRouter.get('/', authMiddleware.verifyToken, stockController.getAllSales);
 
 module.exports = stockRouter;
