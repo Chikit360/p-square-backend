@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "start:dev": "nodemon server.js",
-    "seed": "node seeder.js"
+    "seed": "node seeder.js",
+    "tables:drop":"node scripts/dropTables.js"
   },
   "repository": {
     "type": "git",

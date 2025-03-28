@@ -5,6 +5,18 @@ const mongoose = require('mongoose');
  * Defines the structure for storing medicine-related information in the database.
  */
 const medicineSchema = new mongoose.Schema({
+  
+  /**
+   * Unique of the medicine.
+   * Required: Yes
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
+  medicineCode: {
+    type: String,
+    required: true,
+    trim: true
+  },
   /**
    * Name of the medicine.
    * Required: Yes

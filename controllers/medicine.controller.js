@@ -56,24 +56,55 @@ medicineController.createMedicine = async (req, res) => {
 
 // Read all medicines with their inventory details
 medicineController.getAllMedicines = async (req, res) => {
-    try {
-        console.log("Fetching all medicines...");
+  try {
+      console.log("Fetching all medicines...");
 
-        // Fetch medicines in descending order based on createdAt or updatedAt
-        const medicines = await Medicine.find().sort({ createdAt: -1 });
+      const medicinesWithInventory = await Medicine.aggregate([
+          {
+              $lookup: {
+                  from: "inventories",  // Name of the Inventory collection
+                  localField: "_id",
+                  foreignField: "medicineId",
+                  as: "inventory"
+              }
+          },
+          {
+              $unwind: {
+                  path: "$inventory",
+                  preserveNullAndEmptyArrays: true // Keep medicines even if they don't have inventory
+              }
+          },
+          {
+              $project: {
+                  _id: 0,
+                  medicineId: "$_id",
+                  name: 1,
+                  genericName: 1,
+                  manufacturer: 1,
+                  category: 1,
+                  form: 1,
+                  strength: 1,
+                  unit: 1,
+                  prescriptionRequired: 1,
+                  notes: 1,
+                  status: 1,
+                  createdAt: 1,
+                  updatedAt: 1,
+                  inventoryId: "$inventory._id",
+                  stock: "$inventory.stock",
+                  expiryDate: "$inventory.expiryDate"
+              }
+          },
+          { $sort: { createdAt: -1 } } // Sorting by creation date
+      ]);
 
-        // Fetch inventory details for each medicine
-        const medicinesWithInventory = await Promise.all(medicines.map(async (medicine) => {
-            const inventory = await Inventory.findOne({ medicineId: medicine._id });
-            return { ...medicine.toObject(), inventory };
-        }));
-
-        res.status(200).json({ data: medicinesWithInventory });
-    } catch (error) {
-        console.error('Error fetching medicines:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+      res.status(200).json({ data: medicinesWithInventory });
+  } catch (error) {
+      console.error('Error fetching medicines:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
 };
+
 
 // Read medicine by ID with inventory details
 medicineController.getMedicineById = async (req, res) => {
@@ -98,29 +129,30 @@ medicineController.updateMedicineById = async (req, res) => {
         session.startTransaction();
 
         const { id } = req.params;
-        const { inventoryUpdate, ...medicineUpdate } = req.body;
+        console.log(id)
+        
 
         // Update Medicine
         const updatedMedicine = await Medicine.findByIdAndUpdate(
             id,
-            medicineUpdate,
+            {...req.body},
             { new: true, session }
         );
         if (!updatedMedicine) {
             throw new Error('Medicine not found');
         }
 
-        // Update Inventory if inventoryUpdate is provided
-        if (inventoryUpdate) {
-            const updatedInventory = await Inventory.findOneAndUpdate(
-                { medicineId: id },
-                inventoryUpdate,
-                { new: true, session }
-            );
-            if (!updatedInventory) {
-                throw new Error('Inventory not found');
-            }
-        }
+        // // Update Inventory if inventoryUpdate is provided
+        // if (inventoryUpdate) {
+        //     const updatedInventory = await Inventory.findOneAndUpdate(
+        //         { medicineId: id },
+        //         inventoryUpdate,
+        //         { new: true, session }
+        //     );
+        //     if (!updatedInventory) {
+        //         throw new Error('Inventory not found');
+        //     }
+        // }
 
         await session.commitTransaction();
         res.status(200).json({ message: 'Medicine and inventory updated successfully', medicine: updatedMedicine });
