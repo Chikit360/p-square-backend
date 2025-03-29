@@ -9,5 +9,8 @@ inventoryRouter.post('/', inventoryController.addOrUpdateInventory);
 // Get All inventory Details (Grouped by Medicine ID)
 inventoryRouter.get('/', inventoryController.getAllInventoryDetails);
 
+// inventory by medicineId
+inventoryRouter.get('/medicine-id/:id', inventoryController.getInventoryDetailsByMedicineId);
+
 
 module.exports = inventoryRouter;

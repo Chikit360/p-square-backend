@@ -1,7 +1,7 @@
 const Stock = require('../models/stockModel');
 const Medicine = require('../models/medicineModel');
 const Inventory = require('../models/inventoryModel');
-const { sendResponse } = require('../middlewares/utils/response.formatter');
+const sendResponse  = require('../utils/response.formatter');
 const { default: mongoose } = require('mongoose');
 
 const stockController = {};

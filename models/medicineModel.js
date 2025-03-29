@@ -29,6 +29,17 @@ const medicineSchema = new mongoose.Schema({
     trim: true
   },
   /**
+   * Generic Name of the medicine.
+   * Required: Yes
+   * Type: String
+   * Trims leading and trailing whitespace.
+   */
+  genericName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  /**
    * Manufacturer of the medicine.
    * Required: No
    * Type: String

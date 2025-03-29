@@ -1,4 +1,4 @@
-const { sendResponse } = require('../middlewares/utils/response.formatter');
+const sendResponse = require('../utils/response.formatter');
 const Medicine = require('../models/medicineModel');
 const Inventory = require('../models/inventoryModel');
 
@@ -11,39 +11,41 @@ medicineController.createMedicine = async (req, res) => {
         session.startTransaction();
 
         console.log('Request Body:', req.body);
+        const reqBody={...req.body,medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}`}
 
         // Create Medicine using Transaction
-        const newMedicine = await Medicine.create([req.body], { session });
-        const { quantityInStock, expiryDate, supplier, batchNumber, manufactureDate, mrp, purchasePrice, sellingPrice, minimumStockLevel, shelfLocation, reorderLevel, leadTime } = req.body;
+        const newMedicine = await Medicine.create([reqBody], { session });
+        // const { quantityInStock, expiryDate, supplier, batchNumber, manufactureDate, mrp, purchasePrice, sellingPrice, minimumStockLevel, shelfLocation, reorderLevel, leadTime } = req.body;
 
-        if (!quantityInStock || !expiryDate) {
-            throw new Error('Quantity and Expiry Date are required for inventory creation.');
-        }
+        // if (!quantityInStock || !expiryDate) {
+        //     throw new Error('Quantity and Expiry Date are required for inventory creation.');
+        // }
 
-        // Create Inventory Entry
-        await Inventory.create(
-            [
-                {
-                    medicineId: newMedicine[0]._id,
-                    supplier,
-                    batchNumber,
-                    manufactureDate,
-                    expiryDate,
-                    mrp,
-                    purchasePrice,
-                    sellingPrice,
-                    quantityInStock,
-                    minimumStockLevel,
-                    shelfLocation,
-                    reorderLevel,
-                    leadTime,
-                },
-            ],
-            { session }
-        );
+        // // Create Inventory Entry
+        // await Inventory.create(
+        //     [
+        //         {
+        //             medicineId: newMedicine[0]._id,
+        //             supplier,
+        //             batchNumber,
+        //             manufactureDate,
+        //             expiryDate,
+        //             mrp,
+        //             purchasePrice,
+        //             sellingPrice,
+        //             quantityInStock,
+        //             minimumStockLevel,
+        //             shelfLocation,
+        //             reorderLevel,
+        //             leadTime,
+        //         },
+        //     ],
+        //     { session }
+        // );
 
         await session.commitTransaction();
-        res.status(201).json({ message: 'Medicine and inventory created successfully', medicine: newMedicine[0] });
+        // return sendResponse(res, { status: 200, message: `Medicine and inventory updated successfully`,data: updatedMedicine });
+        return sendResponse(res,{ message: 'Medicine and inventory created successfully', data: newMedicine[0] });
 
     } catch (error) {
         await session.abortTransaction();
@@ -57,51 +59,42 @@ medicineController.createMedicine = async (req, res) => {
 // Read all medicines with their inventory details
 medicineController.getAllMedicines = async (req, res) => {
   try {
-      console.log("Fetching all medicines...");
+    console.log("Fetching all medicines...");
 
-      const medicinesWithInventory = await Medicine.aggregate([
-          {
-              $lookup: {
-                  from: "inventories",  // Name of the Inventory collection
-                  localField: "_id",
-                  foreignField: "medicineId",
-                  as: "inventory"
-              }
+    const medicinesWithInventory = await Medicine.aggregate([
+      {
+        $lookup: {
+          from: "inventories",
+          localField: "_id",
+          foreignField: "medicineId",
+          as: "inventoryDetails",
+        },
+      },
+      {
+        $addFields: {
+          totalQuantity: {
+            $sum: "$inventoryDetails.quantityInStock",
           },
-          {
-              $unwind: {
-                  path: "$inventory",
-                  preserveNullAndEmptyArrays: true // Keep medicines even if they don't have inventory
-              }
+          batchNumber: {
+            $first: "$inventoryDetails.batchNumber",
           },
-          {
-              $project: {
-                  _id: 0,
-                  medicineId: "$_id",
-                  name: 1,
-                  genericName: 1,
-                  manufacturer: 1,
-                  category: 1,
-                  form: 1,
-                  strength: 1,
-                  unit: 1,
-                  prescriptionRequired: 1,
-                  notes: 1,
-                  status: 1,
-                  createdAt: 1,
-                  updatedAt: 1,
-                  inventoryId: "$inventory._id",
-                  stock: "$inventory.stock",
-                  expiryDate: "$inventory.expiryDate"
-              }
-          },
-          { $sort: { createdAt: -1 } } // Sorting by creation date
-      ]);
+        },
+      },
+      {
+        $project: {
+          inventoryDetails: 0, // Exclude inventory details after processing
+        },
+      },
+    ]);
 
-      res.status(200).json({ data: medicinesWithInventory });
+    if (!medicinesWithInventory || medicinesWithInventory.length === 0) {
+      return res.status(404).json({ message: "No medicines found" });
+    }
+
+    res.status(200).json({ data: medicinesWithInventory });
   } catch (error) {
-      console.error('Error fetching medicines:', error);
-      res.status(500).json({ message: 'Internal server error' });
+    console.error("Error fetching medicines:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -155,7 +148,8 @@ medicineController.updateMedicineById = async (req, res) => {
         // }
 
         await session.commitTransaction();
-        res.status(200).json({ message: 'Medicine and inventory updated successfully', medicine: updatedMedicine });
+        return sendResponse(res, { status: 200, message: `Medicine and inventory updated successfully`,data: updatedMedicine });
+        
 
     } catch (error) {
         await session.abortTransaction();

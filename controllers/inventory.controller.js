@@ -1,11 +1,23 @@
-const { sendResponse } = require("../middlewares/utils/response.formatter");
+const sendResponse = require("../utils/response.formatter");
 const Medicine = require("../models/medicineModel");
 const Inventory = require("../models/inventoryModel");
 
 // Add or Update Inventory
+
 exports.addOrUpdateInventory = async (req, res) => {
   try {
-    const { medicineId, quantity, expiryDate, batchNumber, mrp, purchasePrice, sellingPrice } = req.body;
+    const {
+      medicineId,
+      quantityInStock,
+      expiryDate,
+      batchNumber,
+      mrp,
+      purchasePrice,
+      sellingPrice,
+      manufactureDate,
+      minimumStockLevel,
+      shelfLocation,
+    } = req.body;
 
     // Validate Medicine
     const medicine = await Medicine.findById(medicineId);
@@ -13,37 +25,73 @@ exports.addOrUpdateInventory = async (req, res) => {
       return sendResponse(res, { status: 404, message: 'Medicine not found' });
     }
 
-    // Check if inventory with the same expiryDate exists
+    // Check for existing inventory with the same expiryDate
     const existingInventory = await Inventory.findOne({ medicineId, expiryDate });
 
     if (existingInventory) {
       // Update existing inventory
-      existingInventory.quantityInStock += quantity;
+      Object.assign(existingInventory, req.body);
       await existingInventory.save();
-      return sendResponse(res, { status: 200, message: 'Inventory updated successfully', data: existingInventory });
+      return sendResponse(res, {
+        status: 200,
+        message: 'Inventory updated successfully',
+        data: existingInventory,
+      });
     }
 
-    // Create new inventory entry
+    // Check if any inventory exists for the given medicineId
     const existingInventoryItem = await Inventory.findOne({ medicineId });
-    const newInventory = new Inventory({
-      medicineId:existingInventoryItem.medicineId,
-      quantityInStock: quantity,
+
+    if (!existingInventoryItem) {
+      // No inventory exists, create a new one
+      const newInventory = await Inventory.create({
+        medicineId,
+        quantityInStock: Number(quantityInStock),
+        expiryDate,
+        batchNumber,
+        mrp,
+        purchasePrice,
+        sellingPrice,
+        manufactureDate,
+        minimumStockLevel,
+        shelfLocation,
+      });
+      return sendResponse(res, {
+        status: 201,
+        message: 'Inventory added successfully',
+        data: newInventory,
+      });
+    }
+
+    // Create new inventory entry if medicine exists but expiryDate is different
+    const newInventory = await Inventory.create({
+      medicineId,
+      quantityInStock: Number(quantityInStock),
       expiryDate,
-      batchNumber:existingInventoryItem.batchNumber,
-      mrp:existingInventoryItem.mrp,
-      purchasePrice:existingInventoryItem.purchasePrice,
-      sellingPrice:existingInventoryItem.sellingPrice,
-      minimumStockLevel:existingInventoryItem.minimumStockLevel
+      batchNumber: batchNumber || existingInventoryItem.batchNumber,
+      mrp: mrp || existingInventoryItem.mrp,
+      purchasePrice: purchasePrice || existingInventoryItem.purchasePrice,
+      sellingPrice: sellingPrice || existingInventoryItem.sellingPrice,
+      manufactureDate: manufactureDate || existingInventoryItem.manufactureDate,
+      minimumStockLevel: minimumStockLevel || existingInventoryItem.minimumStockLevel,
+      shelfLocation: shelfLocation || existingInventoryItem.shelfLocation,
     });
 
-    await newInventory.save();
-    return sendResponse(res, { status: 201, message: 'Inventory added successfully', data: newInventory });
-
+    return sendResponse(res, {
+      status: 201,
+      message: 'New inventory record created successfully',
+      data: newInventory,
+    });
   } catch (error) {
-    console.error(error);
-    return sendResponse(res, { status: 500, message: 'Internal Server Error', error: process.env.NODE_ENV === 'production' ? undefined : error.message });
+    console.error('Error in addOrUpdateInventory:', error);
+    return sendResponse(res, {
+      status: 500,
+      message: 'Internal Server Error',
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message,
+    });
   }
 };
+
 
 
 // Get All Inventory Details Grouped by Medicine with Expiry Dates
@@ -102,7 +150,7 @@ exports.getAllInventoryDetails = async (req, res) => {
     ]);
 
     if (!inventoryData.length) {
-      return sendResponse(res, { status: 404, message: 'No inventory available' });
+      return sendResponse(res, { data:[], status: 200, message: 'No inventory available' });
     }
 
     return sendResponse(res, { status: 200, data: inventoryData });
@@ -116,3 +164,34 @@ exports.getAllInventoryDetails = async (req, res) => {
   }
 };
 
+// Get Inventory Details by MedicineId
+exports.getInventoryDetailsByMedicineId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate Medicine
+    const medicine = await Medicine.findById(id);
+    if (!medicine) {
+      return sendResponse(res, { status: 404, message: 'Medicine not found' });
+    }
+
+    // Fetch Inventory Data using Aggregation
+    const inventoryData = await Inventory.find({ medicineId: id })
+      .sort({ expiryDate: 1 });
+    // Sort by expiryDate (FIFO)
+
+    // Check if Inventory Exists
+    if (!inventoryData.length) {
+      return sendResponse(res, { status: 200, message: 'No inventory available for this medicine', data: [] });
+    }
+
+    return sendResponse(res, { status: 200, data: inventoryData });
+  } catch (error) {
+    console.error('Error fetching inventory details:', error);
+    return sendResponse(res, {
+      status: 500,
+      message: 'Internal Server Error',
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
+    });
+  }
+};

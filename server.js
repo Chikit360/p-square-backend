@@ -68,7 +68,8 @@ app.use('/medicines', authMiddleware.verifyToken, medicineRouter);
 
 app.use('/stocks', authMiddleware.verifyToken, stockRouter);
 
-app.use('/inventories', authMiddleware.verifyToken, inventoryRouter);
+// app.use('/inventories', authMiddleware.verifyToken, inventoryRouter);
+app.use('/inventories', inventoryRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);
