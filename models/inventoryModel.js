@@ -137,7 +137,7 @@ const inventorySchema = new mongoose.Schema({
  * Compound index to ensure unique combination of `medicineId` and `expiryDate`.
  * This helps in preventing duplicate records for the same medicine batch.
  */
-inventorySchema.index({ medicineId: 1, expiryDate: 1 }, { unique: true });
+inventorySchema.index({ medicineId: 1, expiryDate: 1,batchNumber:1 }, { unique: true });
 
 /**
  * Inventory Model

@@ -88,7 +88,7 @@ medicineController.getAllMedicines = async (req, res) => {
     ]);
 
     if (!medicinesWithInventory || medicinesWithInventory.length === 0) {
-      return res.status(404).json({ message: "No medicines found" });
+      return sendResponse(res,{data:[],status:200,message:"No medicines found"});
     }
 
     res.status(200).json({ data: medicinesWithInventory });

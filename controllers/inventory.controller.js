@@ -19,6 +19,10 @@ exports.addOrUpdateInventory = async (req, res) => {
       shelfLocation,
     } = req.body;
 
+    if (!batchNumber) {
+      return sendResponse(res, { status: 400, message: 'Batch number is required' });
+    }
+
     // Validate Medicine
     const medicine = await Medicine.findById(medicineId);
     if (!medicine) {
@@ -26,9 +30,15 @@ exports.addOrUpdateInventory = async (req, res) => {
     }
 
     // Check for existing inventory with the same expiryDate
-    const existingInventory = await Inventory.findOne({ medicineId, expiryDate });
+    const existingInventory = await Inventory.findOne({medicineId, batchNumber, expiryDate });
 
     if (existingInventory) {
+      if(existingInventory.quantityInStock === quantityInStock) {
+        return sendResponse(res, {
+          status: 400,
+          message: 'Inventory already exists with the same quantity',
+        });
+      }
       // Update existing inventory
       Object.assign(existingInventory, req.body);
       await existingInventory.save();
@@ -40,7 +50,7 @@ exports.addOrUpdateInventory = async (req, res) => {
     }
 
     // Check if any inventory exists for the given medicineId
-    const existingInventoryItem = await Inventory.findOne({ medicineId });
+    const existingInventoryItem = await Inventory.findOne({medicineId, batchNumber });
 
     if (!existingInventoryItem) {
       // No inventory exists, create a new one
