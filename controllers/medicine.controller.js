@@ -384,7 +384,7 @@ medicineController.getAvailableMedicines = async (req, res) => {
         {
           $addFields: {
             totalStock: { $sum: '$inventory.quantityInStock' },
-            mrp: { $max: '$inventory.mrp' } // Extract highest MRP if multiple batches exist
+            sellingPrice: { $max: '$inventory.sellingPrice' } // Extract highest MRP if multiple batches exist
           }
         },
         {
@@ -407,7 +407,7 @@ medicineController.getAvailableMedicines = async (req, res) => {
             _id: 1,
             name: 1,
             totalStock: 1,
-            mrp: 1
+            sellingPrice: 1
           }
         }
       ]);

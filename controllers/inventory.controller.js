@@ -26,7 +26,7 @@ exports.addOrUpdateInventory = async (req, res) => {
     // Validate Medicine
     const medicine = await Medicine.findById(medicineId);
     if (!medicine) {
-      return sendResponse(res, { status: 404, message: 'Medicine not found' });
+      return sendResponse(res, { status: 400, message: 'Medicine not found' });
     }
 
     // Check for existing inventory with the same expiryDate
@@ -182,7 +182,7 @@ exports.getInventoryDetailsByMedicineId = async (req, res) => {
     // Validate Medicine
     const medicine = await Medicine.findById(id);
     if (!medicine) {
-      return sendResponse(res, { status: 404, message: 'Medicine not found' });
+      return sendResponse(res, { status: 400, message: 'Medicine not found' });
     }
 
     // Fetch Inventory Data using Aggregation
