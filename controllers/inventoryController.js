@@ -33,12 +33,6 @@ exports.addOrUpdateInventory = async (req, res) => {
     const existingInventory = await Inventory.findOne({medicineId, batchNumber, expiryDate });
 
     if (existingInventory) {
-      if(existingInventory.quantityInStock === quantityInStock) {
-        return sendResponse(res, {
-          status: 400,
-          message: 'Inventory already exists with the same quantity',
-        });
-      }
       // Update existing inventory
       Object.assign(existingInventory, req.body);
       await existingInventory.save();
