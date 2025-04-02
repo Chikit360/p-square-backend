@@ -1,18 +1,11 @@
 const mongoose = require('mongoose');
+const generateCustomId = require('../utils/generateSchemaID');
 
 const stockSchema = new mongoose.Schema({
   invoiceId: {
     type: String,
     required: true,
     unique: true,
-  },
-  customerName: {
-    type: String,
-    required: false,
-  },
-  customerContact: {
-    type: String,
-    required: false,
   },
   items: [
     {
@@ -43,6 +36,15 @@ const stockSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+});
+
+// Pre-save hook to generate a custom _id before saving
+stockSchema.pre('save', function(next) {
+  if (this.isNew) {
+    // Pass your prefix ('MED' or any other) to the generateCustomId function
+    this._id = generateCustomId('STK'); // You can change the 'MED' to any other prefix as needed
+  }
+  next();
 });
 
 const Stock = mongoose.model('Stock', stockSchema);

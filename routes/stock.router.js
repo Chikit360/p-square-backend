@@ -1,6 +1,6 @@
 const express = require('express');
-const stockController = require('../controllers/stock.controller');
-const authMiddleware = require('../middlewares/auth.middleware'); // Import auth middleware
+const stockController = require('../controllers/stockController');
+const authMiddleware = require('../middlewares/authMiddleware'); // Import auth middleware
 
 const stockRouter = express.Router();
 

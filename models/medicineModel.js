@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const generateCustomId = require('../utils/generateSchemaID');
 
 /**
  * Medicine Schema
@@ -45,20 +46,20 @@ const medicineSchema = new mongoose.Schema({
    * Type: String
    * Trims leading and trailing whitespace.
    */
-  manufacturer: {
-    type: String,
-    trim: true
-  },
+  // manufacturer: {
+  //   type: String,
+  //   trim: true
+  // },
   /**
    * Category of the medicine (e.g., antibiotic, analgesic).
    * Required: No
    * Type: String
    * Trims leading and trailing whitespace.
    */
-  category: {
-    type: String,
-    trim: true
-  },
+  // category: {
+  //   type: String,
+  //   trim: true
+  // },
   /**
    * Form of the medicine (e.g., tablet, capsule).
    * Required: No
@@ -105,10 +106,10 @@ const medicineSchema = new mongoose.Schema({
    * Type: String
    * Trims leading and trailing whitespace.
    */
-  notes: {
-    type: String,
-    trim: true
-  },
+  // notes: {
+  //   type: String,
+  //   trim: true
+  // },
   /**
    * Status of the medicine's availability.
    * Required: No
@@ -116,16 +117,25 @@ const medicineSchema = new mongoose.Schema({
    * Enum: ['Active', 'Inactive']
    * Default: 'Active'
    */
-  status: {
-    type: String,
-    enum: ['active', 'inactive'],
-    default: 'Active'
-  }
+  // status: {
+  //   type: String,
+  //   enum: ['active', 'inactive'],
+  //   default: 'Active'
+  // }
 }, {
   /**
    * Automatically adds `createdAt` and `updatedAt` timestamps to the schema.
    */
   timestamps: true
+});
+
+// Pre-save hook to generate a custom _id before saving
+medicineSchema.pre('save', function(next) {
+  if (this.isNew) {
+    // Pass your prefix ('MED' or any other) to the generateCustomId function
+    this._id = generateCustomId('MED'); // You can change the 'MED' to any other prefix as needed
+  }
+  next();
 });
 
 /**

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const generateCustomId = require('../utils/generateSchemaID');
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -27,9 +28,14 @@ const userSchema = new mongoose.Schema({
   },
 });
 
+
 // Middleware to hash the password before saving
 userSchema.pre('save', async function(next) {
   try {
+    if (this.isNew) {
+      // Pass your prefix ('MED' or any other) to the generateCustomId function
+      this._id = generateCustomId('USR'); // You can change the 'MED' to any other prefix as needed
+    }
     if (!this.isModified('password')) {
       return next();
     }

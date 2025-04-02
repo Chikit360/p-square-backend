@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const generateCustomId = require('../utils/generateSchemaID');
 
 /**
  * Inventory Schema
@@ -42,9 +43,9 @@ const inventorySchema = new mongoose.Schema({
    * Required: No
    * Type: Date
    */
-  manufactureDate: {
-    type: Date
-  },
+  // manufactureDate: {
+  //   type: Date
+  // },
   /**
    * Date after which the medicine should not be used.
    * Required: No
@@ -131,6 +132,15 @@ const inventorySchema = new mongoose.Schema({
    * Automatically adds `createdAt` and `updatedAt` timestamps to the schema.
    */
   timestamps: true
+});
+
+// Pre-save hook to generate a custom _id before saving
+inventorySchema.pre('save', function(next) {
+  if (this.isNew) {
+    // Pass your prefix ('MED' or any other) to the generateCustomId function
+    this._id = generateCustomId('INVT'); // You can change the 'MED' to any other prefix as needed
+  }
+  next();
 });
 
 /**

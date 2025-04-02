@@ -1,8 +1,8 @@
 // user.router.js
 const express = require('express');
 const bodyParser = require('body-parser');
-const userController = require('../controllers/user.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
+const userController = require('../controllers/userController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 

@@ -3,17 +3,19 @@ const Medicine = require('../models/medicineModel');
 const Inventory = require('../models/inventoryModel');
 const sendResponse  = require('../utils/response.formatter');
 const { default: mongoose } = require('mongoose');
+const Customer = require('../models/customerModel');
 
 const stockController = {};
 
-// Create a Sale using FIFO method
+
 stockController.createSale = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  
+
   try {
     const { customerName, customerContact, items } = req.body;
 
+    // Check if items exist
     if (!items || items.length === 0) {
       return sendResponse(res, { status: 400, message: 'No items provided for sale' });
     }
@@ -21,6 +23,7 @@ stockController.createSale = async (req, res) => {
     let totalAmount = 0;
     const saleItems = [];
 
+    // Process each item in the sale
     for (const item of items) {
       const medicine = await Medicine.findById(item.medicineId).session(session);
       if (!medicine) {
@@ -36,59 +39,84 @@ stockController.createSale = async (req, res) => {
       let quantity = item.quantity;
       let itemTotal = 0;
 
+      // Reduce stock based on FIFO
       for (const inventory of inventories) {
         if (quantity === 0) break;
+        if (quantity > inventory.quantityInStock) break;
 
         const sellingQuantity = Math.min(inventory.quantityInStock, quantity);
         inventory.quantityInStock -= sellingQuantity;
         itemTotal += sellingQuantity * inventory.sellingPrice;
         quantity -= sellingQuantity;
 
-        if (inventory.quantityInStock === 0) {
-          await Inventory.findByIdAndDelete(inventory._id).session(session);
-        } else {
+        // Update stock 
+        
           await inventory.save({ session });
-        }
+        
       }
 
-      if (quantity > 0) {
-        await session.abortTransaction();
-        return sendResponse(res, { status: 400, message: `Insufficient stock for medicine: ${medicine.name}` });
-      }
+      
 
       totalAmount += itemTotal;
+
+      console.log(item)
       saleItems.push({
         medicineId: item.medicineId,
-        medicineName: medicine.name,
         quantity: item.quantity,
-        price: inventories[0].sellingPrice,
+        price: 10 || item.sellingPrice,
         total: itemTotal,
       });
     }
 
-    // Create Sale Record
+    // Create Sale Record (Invoice)
     const invoiceId = `INV-${Date.now()}`;
-    const newSale = new Stock({
+    const newSale = await Stock.create([{
       invoiceId,
-      customerName,
-      customerContact,
       items: saleItems,
       totalAmount,
-    });
+    }], { session });
 
-    await newSale.save({ session });
+    console.log(newSale)
+
+    // Find the customer by mobile
+    let customer = await Customer.findOne({ mobile: customerContact }).session(session);
+console.log("first",customer)
+    if (customer) {
+      // Update existing customer with new sale
+      customer.invoices.push(newSale[0]);
+      console.log(customer.invoices)
+      await customer.save({ session });
+    }else{
+      console.log(newSale)
+      // If customer doesn't exist, create a new customer
+      customer = new Customer({
+        mobile: customerContact,
+        name: customerName,
+        invoices: [newSale[0]],
+      });
+
+    }
+
+    await customer.save({ session });
+
+    // Commit the transaction
     await session.commitTransaction();
     session.endSession();
 
     return sendResponse(res, { status: 201, message: 'Sale created successfully', sale: newSale });
 
   } catch (error) {
+    // Abort transaction and handle error
     await session.abortTransaction();
     session.endSession();
     console.error('Error creating sale:', error);
     return sendResponse(res, { status: 500, message: 'Internal server error', error: process.env.NODE_ENV === 'production' ? undefined : error.message });
   }
 };
+
+module.exports = stockController;
+
+
 
 
 // Get all sales with total amount per month

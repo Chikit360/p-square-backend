@@ -12,8 +12,9 @@ const userRouter = require('./routes/user.router');
 const medicineRouter = require('./routes/medicine.router');
 const stockRouter = require('./routes/stock.router');
 const inventoryRouter = require('./routes/inventory.router');
-const authMiddleware = require('./middlewares/auth.middleware');
-const errorMiddleware = require('./middlewares/error.middleware');
+const customerRouter = require('./routes/customerRouter');
+const authMiddleware = require('./middlewares/authMiddleware');
+const errorMiddleware = require('./middlewares/errorMiddleware');
 
 const app = express();
 
@@ -70,6 +71,7 @@ app.use('/sales', authMiddleware.verifyToken, stockRouter);
 
 // app.use('/inventories', authMiddleware.verifyToken, inventoryRouter);
 app.use('/inventories', inventoryRouter);
+app.use('/customers', customerRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);

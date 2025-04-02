@@ -205,3 +205,110 @@ exports.getInventoryDetailsByMedicineId = async (req, res) => {
     });
   }
 };
+
+exports.addInventory = async (req, res) => {
+  try {
+    const {
+      medicineId,
+      quantityInStock,
+      expiryDate,
+      batchNumber,
+      mrp,
+      purchasePrice,
+      sellingPrice,
+      manufactureDate,
+      minimumStockLevel,
+      shelfLocation,
+    } = req.body;
+    console.log(req.body)
+
+    if (!batchNumber) {
+      return sendResponse(res, { status: 400, message: 'Batch number is required' });
+    }
+
+    // Validate Medicine
+    const medicine = await Medicine.findById(medicineId);
+    if (!medicine) {
+      return sendResponse(res, { status: 400, message: 'Medicine not found' });
+    }
+
+    // Check for existing inventory with the same medicineId and batchNumber
+    const existingInventory = await Inventory.findOne({ medicineId, batchNumber });
+
+    if (existingInventory) {
+      return sendResponse(res, {
+        status: 400,
+        message: 'Inventory already exists with the same batch number',
+      });
+    }
+
+    // Create new inventory
+    const newInventory = await Inventory.create({
+      medicineId,
+      quantityInStock: Number(quantityInStock),
+      expiryDate,
+      batchNumber,
+      mrp,
+      purchasePrice,
+      sellingPrice,
+      manufactureDate,
+      minimumStockLevel,
+      shelfLocation,
+    });
+
+    return sendResponse(res, {
+      status: 201,
+      message: 'Inventory added successfully',
+      data: newInventory,
+    });
+  } catch (error) {
+    console.error('Error in addInventory:', error);
+    return sendResponse(res, {
+      status: 500,
+      message: 'Internal Server Error',
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message,
+    });
+  }
+};
+
+
+exports.updateInventoryById = async (req, res) => {
+  try {
+    const { inventoryId } = req.params; // The inventory ID from the route parameter
+    const {
+      quantityInStock,
+      expiryDate,
+      batchNumber,
+      mrp,
+      purchasePrice,
+      sellingPrice,
+      manufactureDate,
+      minimumStockLevel,
+      shelfLocation,
+    } = req.body;
+
+    // Check if inventory exists by ID
+    const existingInventory = await Inventory.findById(inventoryId);
+
+    if (!existingInventory) {
+      return sendResponse(res, { status: 404, message: 'Inventory not found' });
+    }
+
+    // Update the inventory details
+    Object.assign(existingInventory, req.body);
+    await existingInventory.save();
+
+    return sendResponse(res, {
+      status: 200,
+      message: 'Inventory updated successfully',
+      data: existingInventory,
+    });
+  } catch (error) {
+    console.error('Error in updateInventoryById:', error);
+    return sendResponse(res, {
+      status: 500,
+      message: 'Internal Server Error',
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message,
+    });
+  }
+};

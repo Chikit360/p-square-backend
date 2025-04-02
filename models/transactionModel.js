@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const generateCustomId = require('../utils/generateSchemaID');
 
 const transactionSchema = new mongoose.Schema({
   transactionId: {
@@ -60,6 +61,15 @@ const transactionSchema = new mongoose.Schema({
   },
 }, {
   timestamps: true,
+});
+
+// Pre-save hook to generate a custom _id before saving
+transactionSchema.pre('save', function(next) {
+  if (this.isNew) {
+    // Pass your prefix ('MED' or any other) to the generateCustomId function
+    this._id = generateCustomId('TRNC'); // You can change the 'MED' to any other prefix as needed
+  }
+  next();
 });
 
 const Transaction = mongoose.model('Transaction', transactionSchema);
