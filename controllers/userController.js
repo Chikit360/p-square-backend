@@ -1,5 +1,6 @@
 const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
+const sendResponse = require('../utils/response.formatter');
 
 const userController = {};
 
@@ -17,15 +18,27 @@ userController.login = async (req, res) => {
     // Compare passwords
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid password' });
+      return sendResponse(res, {
+        data: null,
+        status: 400,
+        message: 'Invalid password',
+        error:true
+      });
+      
     }
 
     // Generate JWT token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '365d' });
     
-    res.status(200).json({data:user, token });
+    return sendResponse(res, {
+      data: { ...user.toObject(), token },
+      status: 200,
+      message: 'Login successful',
+    });
+   
   } catch (error) {
     console.error('Error logging in:', error);
+    
     res.status(500).json({ message: 'Internal server error' });
   }
 };

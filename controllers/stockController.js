@@ -66,7 +66,7 @@ stockController.createSale = async (req, res) => {
       saleItems.push({
         medicineId: item.medicineId,
         quantity: item.quantity,
-        price: 10 || item.sellingPrice,
+        price: item.sellingPrice,
         total: itemTotal,
       });
     }
