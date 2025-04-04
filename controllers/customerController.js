@@ -81,7 +81,7 @@ const getCustomerPurchaseHistory = async (req, res) => {
     const customer = await Customer.findById(customerId)
       .populate({
         path: 'invoices',
-        select: 'invoiceId items totalAmount',
+        select: 'invoiceId items totalAmount createdAt',
         populate: {
           path: 'items.medicineId', // Populate 'medicineId' in the 'items' array
           model: 'Medicine', // Reference to the 'Medicine' model

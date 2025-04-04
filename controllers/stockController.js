@@ -12,6 +12,9 @@ stockController.createSale = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
+  const userId = req.user._id; // Assuming you have user ID in req.user
+  console.log(userId)
+
   try {
     const { customerName, customerContact, items } = req.body;
 
@@ -72,6 +75,7 @@ stockController.createSale = async (req, res) => {
     const invoiceId = `INV-${Date.now()}`;
     const newSale = await Stock.create([{
       invoiceId,
+      soldBy: userId,
       items: saleItems,
       totalAmount,
     }], { session });
@@ -154,14 +158,67 @@ stockController.getAllSales = async (req, res) => {
           totalTransaction: 1,
           sales: 1
         }
+      },
+      {
+        // Adding $lookup to populate the soldBy field (populate the User data)
+        $unwind: {
+          path: "$sales"
+        }
+      },
+      {
+        $lookup: {
+          from: "users", // The collection to join with (User collection)
+          localField: "sales.soldBy", // Field in `sales` to match
+          foreignField: "_id", // Field in `users` to match
+          as: "sales.soldBy" // The name of the new field in `sales` that will contain the populated user data
+        }
+      },
+      {
+        $set: {
+          "sales.soldBy": { $arrayElemAt: ["$sales.soldBy", 0] } // If there are multiple, take the first
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: "$_id.year",
+            month: "$_id.month"
+          },
+          totalTransaction: { $first: "$totalTransaction" },
+          sales: { $push: "$sales" }
+        }
+      },
+      {
+        $sort: { "_id.year": -1, "_id.month": -1 }
       }
     ]);
 
-    return sendResponse(res, { status: 200, data: salesData });
+    // Fetch customer information for each sale asynchronously
+    const salesWithCustomerData = await Promise.all(salesData.map(async (sale) => {
+      // Fetch customer data for each sale
+      const salesWithCustomer = await Promise.all(sale.sales.map(async (s) => {
+        // Assuming Customer.find() query returns an array of customers, we take the first one
+        const customer = await Customer.findOne({ invoices: { $in: [s._id] } }).select('name mobile');
+        return {
+          ...s,
+          customerName: customer ? customer.name : 'N/A',
+          customerContact: customer ? customer.mobile : 'N/A',
+        };
+      }));
+
+      return {
+        ...sale,
+        sales: salesWithCustomer
+      };
+    }));
+
+    return sendResponse(res, { status: 200, data: salesWithCustomerData });
   } catch (error) {
     console.error('Error fetching sales:', error);
     return sendResponse(res, { status: 500, message: 'Internal server error', error: process.env.NODE_ENV === 'production' ? undefined : error.message });
   }
 };
+
+
 
 module.exports = stockController;

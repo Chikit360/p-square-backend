@@ -7,6 +7,11 @@ const stockSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  soldBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   items: [
     {
       medicineId: {
