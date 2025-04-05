@@ -37,7 +37,7 @@ const medicineSchema = new mongoose.Schema({
    */
   genericName: {
     type: String,
-    required: true,
+    // required: true,
     trim: true
   },
   /**
@@ -68,7 +68,7 @@ const medicineSchema = new mongoose.Schema({
    */
   form: {
     type: String,
-    trim: true
+    // trim: true
   },
   /**
    * Strength of the medicine (e.g., 500 mg).
@@ -78,7 +78,7 @@ const medicineSchema = new mongoose.Schema({
    */
   strength: {
     type: String,
-    trim: true
+    // trim: true
   },
   /**
    * Unit of measurement (e.g., pieces, bottles).
@@ -88,7 +88,7 @@ const medicineSchema = new mongoose.Schema({
    */
   unit: {
     type: String,
-    trim: true
+    // trim: true
   },
   /**
    * Indicates if a prescription is required to dispense the medicine.
