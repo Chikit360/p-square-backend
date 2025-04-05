@@ -11,46 +11,25 @@ medicineController.createMedicine = async (req, res) => {
         session.startTransaction();
 
         console.log('Request Body:', req.body);
-        const reqBody={...req.body,medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}`}
+        const reqBody = { ...req.body, medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}` }
 
         // Create Medicine using Transaction
         const newMedicine = await Medicine.create([reqBody], { session });
-        // const { quantityInStock, expiryDate, supplier, batchNumber, manufactureDate, mrp, purchasePrice, sellingPrice, minimumStockLevel, shelfLocation, reorderLevel, leadTime } = req.body;
-
-        // if (!quantityInStock || !expiryDate) {
-        //     throw new Error('Quantity and Expiry Date are required for inventory creation.');
-        // }
-
-        // // Create Inventory Entry
-        // await Inventory.create(
-        //     [
-        //         {
-        //             medicineId: newMedicine[0]._id,
-        //             supplier,
-        //             batchNumber,
-        //             manufactureDate,
-        //             expiryDate,
-        //             mrp,
-        //             purchasePrice,
-        //             sellingPrice,
-        //             quantityInStock,
-        //             minimumStockLevel,
-        //             shelfLocation,
-        //             reorderLevel,
-        //             leadTime,
-        //         },
-        //     ],
-        //     { session }
-        // );
 
         await session.commitTransaction();
-        // return sendResponse(res, { status: 200, message: `Medicine and inventory updated successfully`,data: updatedMedicine });
-        return sendResponse(res,{ message: 'Medicine and inventory created successfully', data: newMedicine[0] });
-
+        return sendResponse(res, {
+            message: 'Medicine and inventory created successfully',
+            data: newMedicine[0],
+            status: 201
+        });
     } catch (error) {
         await session.abortTransaction();
         console.error('Error creating medicine:', error);
-        res.status(500).json({ message: error.message || 'Internal server error' });
+        return sendResponse(res, {
+            message: error.message || 'Internal server error',
+            error: true,
+            status: 500
+        });
     } finally {
         session.endSession();
     }
@@ -58,46 +37,57 @@ medicineController.createMedicine = async (req, res) => {
 
 // Read all medicines with their inventory details
 medicineController.getAllMedicines = async (req, res) => {
-  try {
-    console.log("Fetching all medicines...");
+    try {
+        console.log("Fetching all medicines...");
 
-    const medicinesWithInventory = await Medicine.aggregate([
-      {
-        $lookup: {
-          from: "inventories",
-          localField: "_id",
-          foreignField: "medicineId",
-          as: "inventoryDetails",
-        },
-      },
-      {
-        $addFields: {
-          totalQuantity: {
-            $sum: "$inventoryDetails.quantityInStock",
-          },
-          batchNumber: {
-            $first: "$inventoryDetails.batchNumber",
-          },
-        },
-      },
-      {
-        $project: {
-          inventoryDetails: 0, // Exclude inventory details after processing
-        },
-      },
-    ]);
+        const medicinesWithInventory = await Medicine.aggregate([
+            {
+                $lookup: {
+                    from: "inventories",
+                    localField: "_id",
+                    foreignField: "medicineId",
+                    as: "inventoryDetails",
+                },
+            },
+            {
+                $addFields: {
+                    totalQuantity: {
+                        $sum: "$inventoryDetails.quantityInStock",
+                    },
+                    batchNumber: {
+                        $first: "$inventoryDetails.batchNumber",
+                    },
+                },
+            },
+            {
+                $project: {
+                    inventoryDetails: 0, // Exclude inventory details after processing
+                },
+            },
+        ]);
 
-    if (!medicinesWithInventory || medicinesWithInventory.length === 0) {
-      return sendResponse(res,{data:[],status:200,message:"No medicines found"});
+        if (!medicinesWithInventory || medicinesWithInventory.length === 0) {
+            return sendResponse(res, {
+                data: [],
+                status: 200,
+                message: "No medicines found"
+            });
+        }
+
+        return sendResponse(res, {
+            data: medicinesWithInventory,
+            status: 200,
+            message: "Medicines retrieved successfully"
+        });
+    } catch (error) {
+        console.error("Error fetching medicines:", error);
+        return sendResponse(res, {
+            message: 'Internal server error',
+            error: true,
+            status: 500
+        });
     }
-
-    res.status(200).json({ data: medicinesWithInventory });
-  } catch (error) {
-    console.error("Error fetching medicines:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
 };
-
 
 // Read medicine by ID with inventory details
 medicineController.getMedicineById = async (req, res) => {
@@ -105,13 +95,25 @@ medicineController.getMedicineById = async (req, res) => {
         const { id } = req.params;
         const medicine = await Medicine.findById(id);
         if (!medicine) {
-            return res.status(404).json({ message: 'Medicine not found' });
+            return sendResponse(res, {
+                message: 'Medicine not found',
+                error: true,
+                status: 404
+            });
         }
         const inventory = await Inventory.findOne({ medicineId: id });
-        res.status(200).json({ medicine: { ...medicine.toObject(), inventory } });
+        return sendResponse(res, {
+            data: { medicine: { ...medicine.toObject(), inventory } },
+            status: 200,
+            message: 'Medicine retrieved successfully'
+        });
     } catch (error) {
         console.error('Error fetching medicine:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        return sendResponse(res, {
+            message: 'Internal server error',
+            error: true,
+            status: 500
+        });
     }
 };
 
@@ -122,39 +124,34 @@ medicineController.updateMedicineById = async (req, res) => {
         session.startTransaction();
 
         const { id } = req.params;
-        console.log(id)
-        
-
-        // Update Medicine
         const updatedMedicine = await Medicine.findByIdAndUpdate(
             id,
-            {...req.body},
+            { ...req.body },
             { new: true, session }
         );
         if (!updatedMedicine) {
-            throw new Error('Medicine not found');
+          return sendResponse(res, {
+            message: 'Medicine not found',
+            error: true,
+            status: 404
+        });
         }
 
-        // // Update Inventory if inventoryUpdate is provided
-        // if (inventoryUpdate) {
-        //     const updatedInventory = await Inventory.findOneAndUpdate(
-        //         { medicineId: id },
-        //         inventoryUpdate,
-        //         { new: true, session }
-        //     );
-        //     if (!updatedInventory) {
-        //         throw new Error('Inventory not found');
-        //     }
-        // }
-
         await session.commitTransaction();
-        return sendResponse(res, { status: 200, message: `Medicine and inventory updated successfully`,data: updatedMedicine });
-        
+        return sendResponse(res, {
+            data: updatedMedicine,
+            status: 200,
+            message: 'Medicine updated successfully'
+        });
 
     } catch (error) {
         await session.abortTransaction();
         console.error('Error updating medicine:', error);
-        res.status(500).json({ message: error.message || 'Internal server error' });
+        return sendResponse(res, {
+            message: error.message || 'Internal server error',
+            error: true,
+            status: 500
+        });
     } finally {
         session.endSession();
     }
@@ -181,12 +178,20 @@ medicineController.deleteMedicineById = async (req, res) => {
         }
 
         await session.commitTransaction();
-        res.status(200).json({ message: 'Medicine and inventory deleted successfully', medicine: deletedMedicine });
+        return sendResponse(res, {
+            data: deletedMedicine,
+            status: 200,
+            message: 'Medicine and inventory deleted successfully'
+        });
 
     } catch (error) {
         await session.abortTransaction();
         console.error('Error deleting medicine:', error);
-        res.status(500).json({ message: error.message || 'Internal server error' });
+        return sendResponse(res, {
+            message: error.message || 'Internal server error',
+            error: true,
+            status: 500
+        });
     } finally {
         session.endSession();
     }
@@ -195,105 +200,117 @@ medicineController.deleteMedicineById = async (req, res) => {
 // Search Medicines
 medicineController.searchMedicines = async (req, res) => {
     try {
-      const { q } = req.query;
-  
-      const matchStage = q
-        ? {
-            $or: [
-              { 'medicine.name': { $regex: q, $options: 'i' } },
-              { 'medicine.category': { $regex: q, $options: 'i' } },
-            ],
-          }
-        : {};
-  
-      const medicines = await Inventory.aggregate([
-        // Lookup to join with Medicine collection
-        {
-          $lookup: {
-            from: 'medicines',
-            localField: 'medicineId',
-            foreignField: '_id',
-            as: 'medicine',
-          },
-        },
-        { $unwind: '$medicine' },
-  
-        // Match the search query
-        { $match: matchStage },
-  
-        // Project the required fields
-        {
-          $project: {
-            _id: 0,
-            medicineId: '$medicine._id',
-            name: '$medicine.name',
-            category: '$medicine.category',
-            expiryDate: 1,
-            quantityInStock: 1,
-          },
-        },
-      ]);
-  
-      if (!medicines.length) {
-        return sendResponse(res, { status: 404, message: 'No medicines found' });
-      }
-  
-      return sendResponse(res, { status: 200, data: medicines });
+        const { q } = req.query;
+
+        const matchStage = q
+            ? {
+                $or: [
+                    { 'medicine.name': { $regex: q, $options: 'i' } },
+                    { 'medicine.category': { $regex: q, $options: 'i' } },
+                ],
+            }
+            : {};
+
+        const medicines = await Inventory.aggregate([
+            {
+                $lookup: {
+                    from: 'medicines',
+                    localField: 'medicineId',
+                    foreignField: '_id',
+                    as: 'medicine',
+                },
+            },
+            { $unwind: '$medicine' },
+            { $match: matchStage },
+            {
+                $project: {
+                    _id: 0,
+                    medicineId: '$medicine._id',
+                    name: '$medicine.name',
+                    category: '$medicine.category',
+                    expiryDate: 1,
+                    quantityInStock: 1,
+                },
+            },
+        ]);
+
+        if (!medicines.length) {
+            return sendResponse(res, { status: 404, message: 'No medicines found' });
+        }
+
+        return sendResponse(res, { status: 200, data: medicines });
     } catch (error) {
-      console.error('Error searching medicines:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+        console.error('Error searching medicines:', error);
+        return sendResponse(res, {
+            message: 'Internal server error',
+            error: true,
+            status: 500
+        });
     }
-  };
-  
-  
-
-medicineController.filterMedicines = async (req, res) => {
-  try {
-      const { minPrice, maxPrice, minQuantity, maxQuantity } = req.query;
-
-      // Define filter criteria
-      const filterCriteria = {};
-
-      // Apply price range filter
-      if (minPrice && maxPrice) {
-          filterCriteria.price = { $gte: minPrice, $lte: maxPrice };
-      } else if (minPrice) {
-          filterCriteria.price = { $gte: minPrice };
-      } else if (maxPrice) {
-          filterCriteria.price = { $lte: maxPrice };
-      }
-
-      // Apply quantity range filter
-      if (minQuantity && maxQuantity) {
-          filterCriteria.stockQuantity = { $gte: minQuantity, $lte: maxQuantity };
-      } else if (minQuantity) {
-          filterCriteria.stockQuantity = { $gte: minQuantity };
-      } else if (maxQuantity) {
-          filterCriteria.stockQuantity = { $lte: maxQuantity };
-      }
-
-      // Fetch medicines based on filter criteria
-      const filteredMedicines = await Medicine.find(filterCriteria);
-      res.status(200).json({ medicines: filteredMedicines });
-  } catch (error) {
-      console.error('Error filtering medicines:', error);
-      res.status(500).json({ message: 'Internal server error' });
-  }
 };
 
+// Filter Medicines
+medicineController.filterMedicines = async (req, res) => {
+    try {
+        const { minPrice, maxPrice, minQuantity, maxQuantity } = req.query;
+
+        const filterCriteria = {};
+
+        if (minPrice && maxPrice) {
+            filterCriteria.price = { $gte: minPrice, $lte: maxPrice };
+        } else if (minPrice) {
+            filterCriteria.price = { $gte: minPrice };
+        } else if (maxPrice) {
+            filterCriteria.price = { $lte: maxPrice };
+        }
+
+        if (minQuantity && maxQuantity) {
+            filterCriteria.stockQuantity = { $gte: minQuantity, $lte: maxQuantity };
+        } else if (minQuantity) {
+            filterCriteria.stockQuantity = { $gte: minQuantity };
+        } else if (maxQuantity) {
+            filterCriteria.stockQuantity = { $lte: maxQuantity };
+        }
+
+        const filteredMedicines = await Medicine.find(filterCriteria);
+        return sendResponse(res, {
+            data: filteredMedicines,
+            status: 200,
+            message: 'Filtered medicines retrieved successfully'
+        });
+    } catch (error) {
+        console.error('Error filtering medicines:', error);
+        return sendResponse(res, {
+            message: 'Internal server error',
+            error: true,
+            status: 500
+        });
+    }
+};
 medicineController.lowStockNotifications = async (req, res) => {
   try {
       const threshold = 10; // Define the threshold for low stock
       const lowStockMedicines = await Medicine.find({ stockQuantity: { $lt: threshold } });
 
       if (lowStockMedicines.length > 0) {
-          res.status(200).json({ message: 'Low stock medicines found.', lowStockMedicines });
+          return sendResponse(res, {
+              message: 'Low stock medicines found.',
+              data: lowStockMedicines,
+              status: 200
+          });
       } else {
-          res.status(200).json({ message: 'No low stock medicines found.' });
+          return sendResponse(res, {
+              message: 'No low stock medicines found.',
+              status: 200
+          });
       }
   } catch (error) {
       console.error('Error fetching low stock medicines:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      return sendResponse(res, {
+          message: 'Internal server error',
+          error: true,
+          status: 500
+      });
   }
 };
 
@@ -311,12 +328,21 @@ medicineController.sortMedicines = async (req, res) => {
       // Fetch and sort medicines based on criteria
       const sortedMedicines = await Medicine.find().sort(sortCriteria);
 
-      res.status(200).json({ medicines: sortedMedicines });
+      return sendResponse(res, {
+          message: 'Medicines sorted successfully',
+          data: sortedMedicines,
+          status: 200
+      });
   } catch (error) {
       console.error('Error sorting medicines:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      return sendResponse(res, {
+          message: 'Internal server error',
+          error: true,
+          status: 500
+      });
   }
 };
+
 medicineController.updateMedicineQuantity = async (req, res) => {
   try {
       const { id } = req.params;
@@ -324,7 +350,11 @@ medicineController.updateMedicineQuantity = async (req, res) => {
 
       // Check if quantity is provided and is a number
       if (quantity == null || isNaN(quantity)) {
-          return res.status(400).json({ message: 'Invalid quantity provided' });
+          return sendResponse(res, {
+              message: 'Invalid quantity provided',
+              error: true,
+              status: 400
+          });
       }
 
       // Update the medicine quantity
@@ -332,14 +362,26 @@ medicineController.updateMedicineQuantity = async (req, res) => {
 
       // Check if medicine was found and updated
       if (!updatedMedicine) {
-          return res.status(404).json({ message: 'Medicine not found' });
+          return sendResponse(res, {
+              message: 'Medicine not found',
+              error: true,
+              status: 404
+          });
       }
 
       // Return the updated medicine
-      res.status(200).json({ message: 'Medicine quantity updated successfully', updatedMedicine });
+      return sendResponse(res, {
+          message: 'Medicine quantity updated successfully',
+          data: updatedMedicine,
+          status: 200
+      });
   } catch (error) {
       console.error('Error updating medicine quantity:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      return sendResponse(res, {
+          message: 'Internal server error',
+          error: true,
+          status: 500
+      });
   }
 };
 
@@ -352,113 +394,122 @@ medicineController.expirationAlerts = async (req, res) => {
       const expirationAlertMedicines = await Medicine.find({ expirationDate: { $lte: thresholdDate } });
 
       if (expirationAlertMedicines.length > 0) {
-          res.status(200).json({ message: 'Medicines nearing expiry found.', expirationAlertMedicines });
+          return sendResponse(res, {
+              message: 'Medicines nearing expiry found.',
+              data: expirationAlertMedicines,
+              status: 200
+          });
       } else {
-          res.status(200).json({ message: 'No medicines nearing expiry found.' });
+          return sendResponse(res, {
+              message: 'No medicines nearing expiry found.',
+              status: 200
+          });
       }
   } catch (error) {
       console.error('Error fetching expiration alerts:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      return sendResponse(res, {
+          message: 'Internal server error',
+          error: true,
+          status: 500
+      });
   }
 };
 
-// available medicine for drop-down during order creation 
-// Available medicines for drop-down during order creation
 medicineController.getAvailableMedicines = async (req, res) => {
-    try {
+  try {
       const { name, page = 1, limit = 10 } = req.query;
-  
+
       // Calculate skip value for pagination
       const skip = (parseInt(page) - 1) * parseInt(limit);
-  
+
       // Perform aggregation to fetch medicines with available stock and MRP
       const medicines = await Medicine.aggregate([
-        {
-          $lookup: {
-            from: 'inventories',
-            localField: '_id',
-            foreignField: 'medicineId',
-            as: 'inventory'
+          {
+              $lookup: {
+                  from: 'inventories',
+                  localField: '_id',
+                  foreignField: 'medicineId',
+                  as: 'inventory'
+              }
+          },
+          {
+              $addFields: {
+                  totalStock: { $sum: '$inventory.quantityInStock' },
+                  sellingPrice: { $max: '$inventory.sellingPrice' }, // Extract highest MRP if multiple batches exist
+                  purchasePrice: { $max: '$inventory.purchasePrice' } // Extract highest MRP if multiple batches exist
+              }
+          },
+          {
+              $match: {
+                  totalStock: { $gte: 1 },
+                  ...(name ? { name: { $regex: name, $options: 'i' } } : {})
+              }
+          },
+          {
+              $sort: name ? {} : { name: 1 }
+          },
+          {
+              $skip: skip
+          },
+          {
+              $limit: parseInt(limit)
+          },
+          {
+              $project: {
+                  _id: 1,
+                  name: 1,
+                  totalStock: 1,
+                  sellingPrice: 1,
+                  purchasePrice: 1
+              }
           }
-        },
-        {
-          $addFields: {
-            totalStock: { $sum: '$inventory.quantityInStock' },
-            sellingPrice: { $max: '$inventory.sellingPrice' }, // Extract highest MRP if multiple batches exist
-            purchasePrice: { $max: '$inventory.purchasePrice' } // Extract highest MRP if multiple batches exist
-          }
-        },
-        {
-          $match: {
-            totalStock: { $gte: 1 },
-            ...(name ? { name: { $regex: name, $options: 'i' } } : {})
-          }
-        },
-        {
-          $sort: name ? {} : { name: 1 }
-        },
-        {
-          $skip: skip
-        },
-        {
-          $limit: parseInt(limit)
-        },
-        {
-          $project: {
-            _id: 1,
-            name: 1,
-            totalStock: 1,
-            sellingPrice: 1,
-            purchasePrice:1
-          }
-        }
       ]);
-  
+
       // Get the total count of matching medicines
       const totalMedicines = await Medicine.aggregate([
-        {
-          $lookup: {
-            from: 'inventories',
-            localField: '_id',
-            foreignField: 'medicineId',
-            as: 'inventory'
+          {
+              $lookup: {
+                  from: 'inventories',
+                  localField: '_id',
+                  foreignField: 'medicineId',
+                  as: 'inventory'
+              }
+          },
+          {
+              $addFields: {
+                  totalStock: { $sum: '$inventory.quantityInStock' }
+              }
+          },
+          {
+              $match: {
+                  totalStock: { $gte: 1 },
+                  ...(name ? { name: { $regex: name, $options: 'i' } } : {})
+              }
+          },
+          {
+              $count: 'totalMedicines'
           }
-        },
-        {
-          $addFields: {
-            totalStock: { $sum: '$inventory.quantityInStock' }
-          }
-        },
-        {
-          $match: {
-            totalStock: { $gte: 1 },
-            ...(name ? { name: { $regex: name, $options: 'i' } } : {})
-          }
-        },
-        {
-          $count: 'totalMedicines'
-        }
       ]);
-  
+
       const totalCount = totalMedicines[0]?.totalMedicines || 0;
-  
-      // Return response
-      res.status(200).json({
-        data: medicines,
-        totalMedicines: totalCount,
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(totalCount / limit),
+
+      return sendResponse(res, {
+          data: medicines,
+          totalMedicines: totalCount,
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(totalCount / limit),
+          status: 200
       });
-  
-    } catch (error) {
+
+  } catch (error) {
       console.error('Error fetching available medicines:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  };
-  
-  
+      return sendResponse(res, {
+          message: 'Internal server error',
+          error: true,
+          status: 500
+      });
+  }
+};
 
-
-  
 
 module.exports = medicineController;

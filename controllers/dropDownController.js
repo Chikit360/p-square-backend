@@ -4,27 +4,27 @@ const sendResponse = require("../utils/response.formatter");
 // Get all options
 const getDropdownOptions = async (req, res) => {
   try {
-    console.log(req.query)
+    console.log(req.query);
     const { inputFieldName } = req.query;
     const options = await DropdownOption.find({ inputFieldName });
-    console.log(options)
-    return sendResponse(res,{data:options,status:200})
+    console.log(options);
+    return sendResponse(res, { data: options, message: 'Dropdown options fetched successfully', status: 200 });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching dropdown options", error });
+    console.error(error);
+    return sendResponse(res, { data: null, message: "Error fetching dropdown options", error: true, status: 500 });
   }
 };
 
 // Add new option
 const addDropdownOption = async (req, res) => {
   try {
-    console.log(req.body)
+    console.log(req.body);
     const newOption = new DropdownOption(req.body);
     await newOption.save();
-    return sendResponse(res,{data:newOption,message: "Option added",status:201})
-    
+    return sendResponse(res, { data: newOption, message: "Option added successfully", status: 201 });
   } catch (error) {
-    console.log(error)
-    return sendResponse(res,{data:null,message: "error",status:500})
+    console.error(error);
+    return sendResponse(res, { data: null, message: "Error adding option", error: true, status: 500 });
   }
 };
 
@@ -32,11 +32,11 @@ const addDropdownOption = async (req, res) => {
 const updateDropdownOption = async (req, res) => {
   try {
     const updatedOption = await DropdownOption.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedOption) return res.status(404).json({ message: "Option not found" });
-    return sendResponse(res,{data:updatedOption,message: "update",status:200})
-    
+    if (!updatedOption) return sendResponse(res, { data: null, message: "Option not found", error: true, status: 404 });
+    return sendResponse(res, { data: updatedOption, message: "Option updated successfully", status: 200 });
   } catch (error) {
-    res.status(500).json({ message: "Error updating dropdown option", error });
+    console.error(error);
+    return sendResponse(res, { data: null, message: "Error updating dropdown option", error: true, status: 500 });
   }
 };
 
@@ -44,10 +44,11 @@ const updateDropdownOption = async (req, res) => {
 const deleteDropdownOption = async (req, res) => {
   try {
     const deletedOption = await DropdownOption.findByIdAndDelete(req.params.id);
-    if (!deletedOption) return res.status(404).json({ message: "Option not found" });
-    res.status(200).json({ message: "Dropdown option deleted successfully" });
+    if (!deletedOption) return sendResponse(res, { data: null, message: "Option not found", error: true, status: 404 });
+    return sendResponse(res, { data: null, message: "Dropdown option deleted successfully", status: 200 });
   } catch (error) {
-    res.status(500).json({ message: "Error deleting dropdown option", error });
+    console.error(error);
+    return sendResponse(res, { data: null, message: "Error deleting dropdown option", error: true, status: 500 });
   }
 };
 

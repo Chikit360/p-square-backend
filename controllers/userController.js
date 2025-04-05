@@ -12,7 +12,12 @@ userController.login = async (req, res) => {
     // Check if the user exists
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return sendResponse(res, {
+        data: null,
+        status: 404,
+        message: 'User not found',
+        error: true
+      });
     }
 
     // Compare passwords
@@ -22,24 +27,26 @@ userController.login = async (req, res) => {
         data: null,
         status: 400,
         message: 'Invalid password',
-        error:true
+        error: true
       });
-      
     }
 
     // Generate JWT token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '365d' });
-    
+
     return sendResponse(res, {
       data: { ...user.toObject(), token },
       status: 200,
       message: 'Login successful',
     });
-   
   } catch (error) {
     console.error('Error logging in:', error);
-    
-    res.status(500).json({ message: 'Internal server error' });
+    return sendResponse(res, {
+      data: null,
+      status: 500,
+      message: 'Internal server error',
+      error: true
+    });
   }
 };
 
@@ -48,12 +55,26 @@ userController.getCurrentUser = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return sendResponse(res, {
+        data: null,
+        status: 404,
+        message: 'User not found',
+        error: true
+      });
     }
-    res.status(200).json({data:user});
+    return sendResponse(res, {
+      data: user,
+      status: 200,
+      message: 'User info retrieved successfully',
+    });
   } catch (error) {
     console.error('Error fetching user info:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return sendResponse(res, {
+      data: null,
+      status: 500,
+      message: 'Internal server error',
+      error: true
+    });
   }
 };
 
@@ -66,13 +87,27 @@ userController.updateUser = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true, runValidators: true }).select('-password');
 
     if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return sendResponse(res, {
+        data: null,
+        status: 404,
+        message: 'User not found',
+        error: true
+      });
     }
 
-    res.status(200).json(updatedUser);
+    return sendResponse(res, {
+      data: updatedUser,
+      status: 200,
+      message: 'User updated successfully',
+    });
   } catch (error) {
     console.error('Error updating user:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return sendResponse(res, {
+      data: null,
+      status: 500,
+      message: 'Internal server error',
+      error: true
+    });
   }
 };
 
@@ -84,13 +119,27 @@ userController.deleteUser = async (req, res) => {
     const deletedUser = await User.findByIdAndDelete(userId);
 
     if (!deletedUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return sendResponse(res, {
+        data: null,
+        status: 404,
+        message: 'User not found',
+        error: true
+      });
     }
 
-    res.status(200).json({ message: 'User deleted successfully' });
+    return sendResponse(res, {
+      data: null,
+      status: 200,
+      message: 'User deleted successfully',
+    });
   } catch (error) {
     console.error('Error deleting user:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    return sendResponse(res, {
+      data: null,
+      status: 500,
+      message: 'Internal server error',
+      error: true
+    });
   }
 };
 

@@ -12,8 +12,8 @@ stockController.createSale = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  const userId = req.user._id; // Assuming you have user ID in req.user
-  console.log(userId)
+  const user = req.user; // Assuming you have user ID in req.user
+  console.log(user)
 
   try {
     const { customerName, customerContact, items } = req.body;
@@ -75,7 +75,7 @@ stockController.createSale = async (req, res) => {
     const invoiceId = `INV-${Date.now()}`;
     const newSale = await Stock.create([{
       invoiceId,
-      soldBy: userId,
+      soldBy: user,
       items: saleItems,
       totalAmount,
     }], { session });
@@ -107,7 +107,7 @@ console.log("first",customer)
     await session.commitTransaction();
     session.endSession();
 
-    return sendResponse(res, { status: 201, message: 'Sale created successfully', sale: newSale });
+    return sendResponse(res, { status: 201, message: 'Sale created successfully', data: newSale[0] });
 
   } catch (error) {
     // Abort transaction and handle error
