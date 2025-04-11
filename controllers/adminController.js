@@ -6,7 +6,7 @@ const sendResponse = require("../utils/response.formatter");
 
 const dashboardAnalytics = async (req, res) => {
   try {
-    const { range = "monthly" } = req.query;
+    const { range = "daily" } = req.query;
 
     const today = new Date();
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));

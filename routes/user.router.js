@@ -12,10 +12,13 @@ router.post('/login', userController.login);
 // Get current user info
 router.get('/me', authMiddleware.verifyToken, userController.getCurrentUser);
 
+router.get('/logout', authMiddleware.verifyToken, userController.logout);
+
 // Delete user
 router.delete('/:id', authMiddleware.verifyToken, userController.deleteUser);
 
 // Update user
 router.put('/:id', authMiddleware.verifyToken, userController.updateUser);
+
 
 module.exports = router;

@@ -7,7 +7,7 @@ const getDropdownOptions = async (req, res) => {
     console.log(req.query);
     const { inputFieldName } = req.query;
     const options = await DropdownOption.find({ inputFieldName });
-    console.log(options);
+    
     return sendResponse(res, { data: options, message: 'Dropdown options fetched successfully', status: 200 });
   } catch (error) {
     console.error(error);

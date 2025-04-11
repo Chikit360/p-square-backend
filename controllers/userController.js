@@ -1,6 +1,8 @@
 const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const sendResponse = require('../utils/response.formatter');
+const tokenModel = require('../models/tokenModel');
+const createAndStoreToken = require('../utility/generateToken');
 
 const userController = {};
 
@@ -32,7 +34,8 @@ userController.login = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '365d' });
+    console.log("first")
+    const token = await createAndStoreToken(user._id,"access");
 
     return sendResponse(res, {
       data: { ...user.toObject(), token },
@@ -138,6 +141,47 @@ userController.deleteUser = async (req, res) => {
       data: null,
       status: 500,
       message: 'Internal server error',
+      error: true
+    });
+  }
+};
+
+/**
+ * Logs out the user by blacklisting their current JWT token.
+ */
+userController.logout = async (req, res) => {
+  try {
+    const token = req.headers.authorization.split(' ')[1]; // Extract token from Authorization header
+    if (!token) {
+      return sendResponse(res, {
+        status: 401,
+        message: 'Token not provided',
+        error: true
+      });
+    }
+    const tokenDoc = await tokenModel.findOne({ token });
+    if (!tokenDoc) {
+      return sendResponse(res, {
+        status: 400,
+        message: 'Token not found or already invalidated',
+        error: true
+      });
+    }
+
+    // Blacklist the token instead of deleting it
+    tokenDoc.blacklisted = true;
+    await tokenDoc.save();
+
+    return sendResponse(res, {
+      status: 200,
+      message: 'Logged out successfully',
+      data: null
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return sendResponse(res, {
+      status: 500,
+      message: 'An error occurred while logging out',
       error: true
     });
   }
