@@ -14,6 +14,7 @@ const stockRouter = require('./routes/stock.router');
 const inventoryRouter = require('./routes/inventory.router');
 const customerRouter = require('./routes/customerRouter');
 const dropDownRouter = require('./routes/dropDownRoute');
+const dashboardRouter = require('./routes/dashboardRouter');
 const authMiddleware = require('./middlewares/authMiddleware');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 
@@ -74,6 +75,7 @@ app.use('/sales', authMiddleware.verifyToken, stockRouter);
 app.use('/inventories', inventoryRouter);
 app.use('/customers', customerRouter);
 app.use('/dropdowns', dropDownRouter);
+app.use('/dashboard', dashboardRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);
