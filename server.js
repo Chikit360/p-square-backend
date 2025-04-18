@@ -16,6 +16,7 @@ const inventoryRouter = require('./routes/inventory.router');
 const customerRouter = require('./routes/customerRouter');
 const dropDownRouter = require('./routes/dropDownRoute');
 const dashboardRouter = require('./routes/dashboardRouter');
+const notificationRouter = require('./routes/notificationRouter');
 const authMiddleware = require('./middlewares/authMiddleware');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const { runLowStockCheck, expiringSoonAlert, runExpiryCheck } = require('./services/inventoryService');
@@ -56,6 +57,7 @@ cron.schedule('0 6,12,20 * * *', () => {
 
 
 
+
 // Passport Initialization
 app.use(passport.initialize());
 app.use(passport.session());
@@ -92,6 +94,7 @@ app.use('/inventories', inventoryRouter);
 app.use('/customers', customerRouter);
 app.use('/dropdowns', dropDownRouter);
 app.use('/dashboard', dashboardRouter);
+app.use('/notifications', authMiddleware.verifyToken, notificationRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);

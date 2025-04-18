@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const Inventory = require('../models/inventoryModel');
 const sendEmail = require('./mailService');
 const User = require('../models/userModel');
+const notificationModel = require('../models/notificationModel');
 
 // HTML Templates
 const lowStockAlertTemp = `...`; // as provided above
@@ -70,6 +71,11 @@ const lowStockAlert = async () => {
         "🚨 Low Stock Alert",
         html
       );
+      await notificationModel.create({
+        userId: users[0]._id,
+        title: "🚨 Low Stock Alert",
+        message: `The following medicines are low in stock: ${lowStockItems.map(item => item.medicineId.name).join(', ')}`
+      });
     }
 
     return lowStockItems;
@@ -146,6 +152,11 @@ const expiringSoonAlert = async () => {
         "⚠️ Expiring Soon Alert",
         html
       );
+      await notificationModel.create({
+        userId: users[0]._id,
+        title: "⚠️ Expiring Soon Alert",
+        message: `The following medicines are expiring soon: ${expiringItems.map(item => item.medicineId.name).join(', ')}`
+      });
     }
 
     return expiringItems;
