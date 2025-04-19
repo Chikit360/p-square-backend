@@ -37,7 +37,7 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
           form: item["FORM"],
           strength: item["STRENGTH"],
           unit: item["UNIT"],
-          prescription: item["PRESCRIPTION"],
+          prescription: item["PRESCRIPTION"]==='yes'?true:false,
           medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}`,
         };
 
