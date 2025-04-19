@@ -1,5 +1,4 @@
 const xlsx = require("xlsx");
-
 const sendResponse = require("../utils/response.formatter");
 const Medicine = require("../models/medicineModel");
 const Inventory = require("../models/inventoryModel");
@@ -17,67 +16,104 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
     const fileBuffer = req.files.file.data;
     const workbook = xlsx.read(fileBuffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    const sheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(sheet, { defval: "" });
 
     const session = await Medicine.startSession();
     session.startTransaction();
 
-    const results = [];
-
     for (const item of data) {
-      const medicineData = {
-        name: item["name"],
-        genericName: item["generic name"],
-        form: item["form"],
-        strength: item["strength"],
-        unit: item["unit"],
-        prescription: item["prescription"],
-        medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}`,
-      };
+      try {
+        // Validate required fields
+        if (!item["ITEM NAME"] || !item["EXPIRY"] || !item["QTY"]) {
+          item["Status"] = "Failed: Missing required fields";
+          continue;
+        }
 
-      let medicine = await Medicine.findOne({ name: medicineData.name }).session(session);
-      if (!medicine) {
-        medicine = await Medicine.create([medicineData], { session });
-        medicine = medicine[0];
-      }
+        // Prepare medicine data
+        const medicineData = {
+          name: item["ITEM NAME"],
+          genericName: item["GENERIC NAME"],
+          form: item["FORM"],
+          strength: item["STRENGTH"],
+          unit: item["UNIT"],
+          prescription: item["PRESCRIPTION"],
+          medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}`,
+        };
 
-      const inventoryData = {
-        medicineId: medicine._id,
-        quantityInStock: Number(item["quantity"]),
-        expiryDate: new Date(item["exp"]),
-        batchNumber: item["batch number"],
-        mrp: Number(item["mrp"]),
-        purchasePrice: Number(item["purchase price"]),
-        sellingPrice: Number(item["selling price"]),
-        manufactureDate: new Date(item["manufacture date"]),
-        minimumStockLevel: Number(item["minimum stock level"]),
-        shelfLocation: item["self location"],
-      };
+        // Find or create medicine
+        let medicine = await Medicine.findOne({ name: medicineData.name }).session(session);
+        if (!medicine) {
+          try {
+            const created = await Medicine.create([medicineData], { session });
+            medicine = created[0];
+          } catch {
+            item["Status"] = "Failed: Medicine creation error";
+            continue;
+          }
+        }
 
-      const existingInventory = await Inventory.findOne({
-        medicineId: medicine._id,
-        batchNumber: inventoryData.batchNumber,
-        expiryDate: inventoryData.expiryDate,
-      }).session(session);
+        // Parse expiry date
+        const expiryDate = new Date(item["EXPIRY"]);
+        if (isNaN(expiryDate)) {
+          item["Status"] = "Failed: Invalid expiry date";
+          continue;
+        }
 
-      if (existingInventory) {
-        Object.assign(existingInventory, inventoryData);
-        await existingInventory.save({ session });
-        results.push({ medicine: medicine.name, status: "Updated inventory" });
-      } else {
-        await Inventory.create([inventoryData], { session });
-        results.push({ medicine: medicine.name, status: "Created new inventory" });
+        // Prepare inventory data
+        const inventoryData = {
+          medicineId: medicine._id,
+          batchNumber: item["BATCH"],
+          expiryDate: expiryDate,
+          quantityInStock: Number(item["QTY"]),
+          mrp: Number(item["MRP"]),
+          sellingPrice: Number(item["SRATE"]),
+          purchasePrice: Number(item["PURCHASE PRICE"]),
+          minimumStockLevel: Number(item["MINIMUM STOCK"]),
+          shelfLocation: item["SELF LOCATION"],
+        };
+
+        // Find or create inventory
+        const existingInventory = await Inventory.findOne({
+          medicineId: medicine._id,
+          batchNumber: inventoryData.batchNumber,
+          expiryDate: inventoryData.expiryDate,
+        }).session(session);
+
+        if (existingInventory) {
+          Object.assign(existingInventory, inventoryData);
+          await existingInventory.save({ session });
+          item["Status"] = "Updated inventory";
+        } else {
+          try {
+            await Inventory.create([inventoryData], { session });
+            item["Status"] = "Created new inventory";
+          } catch {
+            item["Status"] = "Failed: Inventory creation error";
+          }
+        }
+      } catch (rowError) {
+        item["Status"] = `Failed: ${rowError.message}`;
       }
     }
 
     await session.commitTransaction();
     session.endSession();
 
-    return sendResponse(res, {
-      status: 201,
-      message: "Bulk upload completed",
-      data: results,
+    // Create result sheet
+    const newSheet = xlsx.utils.json_to_sheet(data);
+    const newWorkbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(newWorkbook, newSheet, "Result");
+
+    const resultBuffer = xlsx.write(newWorkbook, {
+      type: "buffer",
+      bookType: "xlsx",
     });
+
+    res.setHeader("Content-Disposition", "attachment; filename=upload_result.xlsx");
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+    return res.send(resultBuffer);
   } catch (error) {
     console.error("Bulk upload error:", error);
     return sendResponse(res, {

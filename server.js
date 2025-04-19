@@ -16,6 +16,7 @@ const inventoryRouter = require('./routes/inventory.router');
 const customerRouter = require('./routes/customerRouter');
 const dropDownRouter = require('./routes/dropDownRoute');
 const dashboardRouter = require('./routes/dashboardRouter');
+const bulkUploadRouter = require('./routes/bulkUploadRouter');
 const authMiddleware = require('./middlewares/authMiddleware');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const { runLowStockCheck, expiringSoonAlert, runExpiryCheck } = require('./services/inventoryService');
@@ -92,6 +93,7 @@ app.use('/inventories', inventoryRouter);
 app.use('/customers', customerRouter);
 app.use('/dropdowns', dropDownRouter);
 app.use('/dashboard', dashboardRouter);
+app.use('/bulk-upload', bulkUploadRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);
