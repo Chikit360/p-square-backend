@@ -5,6 +5,7 @@ const Inventory = require("../models/inventoryModel");
 
 exports.bulkUploadMedicineInventory = async (req, res) => {
   try {
+    console.log(req.files.file)
     if (!req.files || !req.files.file) {
       return sendResponse(res, {
         status: 400,
@@ -17,12 +18,12 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
     const workbook = xlsx.read(fileBuffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+    const rawData = xlsx.utils.sheet_to_json(sheet, { defval: "" });
 
     const session = await Medicine.startSession();
     session.startTransaction();
 
-    for (const item of data) {
+    for (const item of rawData) {
       try {
         // Validate required fields
         if (!item["ITEM NAME"] || !item["EXPIRY"] || !item["QTY"]) {
@@ -32,17 +33,18 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
 
         // Prepare medicine data
         const medicineData = {
+          hospital: req.user.hospital,
           name: item["ITEM NAME"],
           genericName: item["GENERIC NAME"],
           form: item["FORM"],
           strength: item["STRENGTH"],
           unit: item["UNIT"],
-          prescription: item["PRESCRIPTION"] === 'yes' ? true : false,
+          prescriptionRequired: item["PRESCRIPTION"] === 'yes' ? true : false,
           medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}`,
         };
 
         // Find or create medicine
-        let medicine = await Medicine.findOne({ name: medicineData.name }).session(session);
+        let medicine = await Medicine.findOne({ name: medicineData.name, hospital: req.user.hospital }).session(session);
         if (!medicine) {
           try {
             const created = await Medicine.create([medicineData], { session });
@@ -53,12 +55,31 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
           }
         }
 
-        // Parse expiry date
-        const expiryDate = new Date(item["EXPIRY"]);
-        if (isNaN(expiryDate)) {
+        let expiryDate;
+
+        const expiryRaw = item["EXPIRY"];
+
+        if (typeof expiryRaw === "number") {
+          // Handle Excel serial date (e.g., 45926)
+          expiryDate = new Date(Math.round((expiryRaw - 25569) * 86400 * 1000)); // Convert to JS date
+        } else if (typeof expiryRaw === "string") {
+          // Handle MM/YY or MM/YYYY
+          const [monthStr, yearStr] = expiryRaw.split("/");
+          const month = parseInt(monthStr);
+          let year = parseInt(yearStr);
+
+          if (!isNaN(month) && !isNaN(year)) {
+            if (year < 100) year += 2000; // Convert '25' -> '2025'
+            expiryDate = new Date(year, month - 1, 1); // Set to 1st of the month
+          }
+        }
+
+        if (!expiryDate || isNaN(expiryDate.getTime())) {
           item["Status"] = "Failed: Invalid expiry date";
           continue;
         }
+
+        item["EXPIRY"] = expiryDate.toISOString().split("T")[0]; // Format: YYYY-MM-DD
 
         // Prepare inventory data
         const inventoryData = {
@@ -100,6 +121,20 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
+    // Replace empty string cells with "N/A"
+    const data = rawData.map(row =>
+      Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [key, value === "" ? "N/A" : value])
+      )
+    );
+
+    // data.push(
+    //   {},
+    //   { "ITEM NAME": "Status Explanation:" },
+    //   { "ITEM NAME": "Created new inventory", Status: "New inventory record added" },
+    //   { "ITEM NAME": "Updated inventory", Status: "Existing inventory updated" },
+    //   { "ITEM NAME": "Failed: ...", Status: "Error occurred, see reason in Status column" }
+    // );
     // Create result sheet
     const newSheet = xlsx.utils.json_to_sheet(data);
     const newWorkbook = xlsx.utils.book_new();
@@ -110,10 +145,17 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
       bookType: "xlsx",
     });
 
-    res.setHeader("Content-Disposition", "attachment; filename=upload_result.xlsx");
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    const resultBase64 = resultBuffer.toString("base64");
 
-    return res.send(resultBuffer);
+    return sendResponse(res, {
+      status: 200,
+      message: "Bulk upload processed",
+      data: {
+        resultTable: data, // This contains the annotated rows with status
+        resultFile: resultBase64, // This is for the download button
+      },
+    });
+
   } catch (error) {
     console.error("Bulk upload error:", error);
     return sendResponse(res, {
