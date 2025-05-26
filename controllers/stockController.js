@@ -1,7 +1,7 @@
 const Stock = require('../models/stockModel');
 const Medicine = require('../models/medicineModel');
 const Inventory = require('../models/inventoryModel');
-const sendResponse  = require('../utils/response.formatter');
+const sendResponse = require('../utils/response.formatter');
 const { default: mongoose } = require('mongoose');
 const Customer = require('../models/customerModel');
 
@@ -49,16 +49,16 @@ stockController.createSale = async (req, res) => {
 
         const sellingQuantity = Math.min(inventory.quantityInStock, quantity);
         inventory.quantityInStock -= sellingQuantity;
-        itemTotal += sellingQuantity * inventory.sellingPrice;
+        itemTotal += sellingQuantity * inventory.mrp;
         quantity -= sellingQuantity;
 
         // Update stock 
-        
-          await inventory.save({ session });
-        
+
+        await inventory.save({ session });
+
       }
 
-      
+
 
       totalAmount += itemTotal;
 
@@ -66,7 +66,7 @@ stockController.createSale = async (req, res) => {
       saleItems.push({
         medicineId: item.medicineId,
         quantity: item.quantity,
-        price: item.sellingPrice,
+        price: item.mrp,
         total: itemTotal,
       });
     }
@@ -84,13 +84,13 @@ stockController.createSale = async (req, res) => {
 
     // Find the customer by mobile
     let customer = await Customer.findOne({ mobile: customerContact }).session(session);
-console.log("first",customer)
+    console.log("first", customer)
     if (customer) {
       // Update existing customer with new sale
       customer.invoices.push(newSale[0]);
       console.log(customer.invoices)
       await customer.save({ session });
-    }else{
+    } else {
       console.log(newSale)
       // If customer doesn't exist, create a new customer
       customer = new Customer({

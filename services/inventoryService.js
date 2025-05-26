@@ -13,10 +13,10 @@ const expirySoonTemp = `...`;    // as provided above
 // ===============================
 const lowStockAlert = async () => {
   try {
-    const users=await User.find({role:"admin"});
-    if(users.length===0){
-        console.log("No admin users found for low stock alert.");
-        return;
+    const users = await User.find({ role: "admin" });
+    if (users.length === 0) {
+      console.log("No admin users found for low stock alert.");
+      return;
     }
 
     const lowStockItems = await Inventory.find({
@@ -27,12 +27,12 @@ const lowStockAlert = async () => {
       // Replace placeholders manually or use a template engine
       const rows = lowStockItems.map(item => `
         <tr>
-          <td style="border: 1px solid #ccc; padding: 10px; text-align: left;">${item.medicineId.name}</td>
+          
           <td style="border: 1px solid #ccc; padding: 10px; text-align: center;">${item.quantityInStock}</td>
           <td style="border: 1px solid #ccc; padding: 10px; text-align: center;">${item.minimumStockLevel}</td>
         </tr>
       `).join('');
-      
+
       const html = `
       <!DOCTYPE html>
       <html>
@@ -65,7 +65,7 @@ const lowStockAlert = async () => {
       </body>
       </html>
       `;
-      
+
       await sendEmail(
         users[0].email, // Assuming you want to send to the first admin user
         "🚨 Low Stock Alert",
@@ -74,7 +74,7 @@ const lowStockAlert = async () => {
       await notificationModel.create({
         userId: users[0]._id,
         title: "🚨 Low Stock Alert",
-        message: `The following medicines are low in stock: ${lowStockItems.map(item => item.medicineId.name).join(', ')}`
+        message: `The following medicines are low in stock: ${lowStockItems.map(item => item.medicineId).join(', ')}`
       });
     }
 
@@ -93,27 +93,27 @@ const expiringSoonAlert = async () => {
     const today = new Date();
     const nextTenDays = new Date();
     nextTenDays.setDate(today.getDate() + 10);
-    const users=await User.find({role:"admin"});
-    if(users.length===0){
-        console.log("No admin users found for expiring soon alert.");
-        return;
+    const users = await User.find({ role: "admin" });
+    if (users.length === 0) {
+      console.log("No admin users found for expiring soon alert.");
+      return;
     }
     const expiringItems = await Inventory.find({
       expiryDate: { $gte: today, $lte: nextTenDays }
     }).populate('medicineId');
 
     if (expiringItems.length > 0) {
-        const rows = expiringItems.map(item => `
+      const rows = expiringItems.map(item => `
             <tr>
               <td style="border: 1px solid #ccc; padding: 10px; text-align: left;">${item.medicineId.name}</td>
               <td style="border: 1px solid #ccc; padding: 10px; text-align: center;">${item.expiryDate.toLocaleDateString('en-US', {
-                year: 'numeric', month: 'long', day: 'numeric'
-              })}</td>
+        year: 'numeric', month: 'long', day: 'numeric'
+      })}</td>
               <td style="border: 1px solid #ccc; padding: 10px; text-align: center;">${item.quantityInStock}</td>
             </tr>
           `).join('');
-          
-          const html = `
+
+      const html = `
           <!DOCTYPE html>
           <html>
           <head>
@@ -145,7 +145,7 @@ const expiringSoonAlert = async () => {
           </body>
           </html>
           `;
-          
+
 
       await sendEmail(
         users[0].email, // Assuming you want to send to the first admin user

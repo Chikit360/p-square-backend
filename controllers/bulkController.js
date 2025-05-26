@@ -5,7 +5,7 @@ const Inventory = require("../models/inventoryModel");
 
 exports.bulkUploadMedicineInventory = async (req, res) => {
   try {
-    console.log(req.files.file)
+    // console.log(req.files.file)
     if (!req.files || !req.files.file) {
       return sendResponse(res, {
         status: 400,
@@ -26,38 +26,37 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
     for (const item of rawData) {
       try {
         // Validate required fields
-        if (!item["ITEM NAME"] || !item["EXPIRY"] || !item["QTY"]) {
+        if (!item["name"] || !item["exp"] || !item["quantity"]) {
           item["Status"] = "Failed: Missing required fields";
           continue;
         }
 
         // Prepare medicine data
         const medicineData = {
-          hospital: req.user.hospital,
-          name: item["ITEM NAME"],
-          genericName: item["GENERIC NAME"],
-          form: item["FORM"],
-          strength: item["STRENGTH"],
-          unit: item["UNIT"],
-          prescriptionRequired: item["PRESCRIPTION"] === 'yes' ? true : false,
+          name: item["name"],
+          // genericName: item["GENERIC NAME"],
+          form: item["form"],
+          strength: item["strength"],
+          unit: item["unit"],
+          prescriptionRequired: item["prescription"] === 'yes' ? true : false,
           medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}`,
         };
 
         // Find or create medicine
-        let medicine = await Medicine.findOne({ name: medicineData.name, hospital: req.user.hospital }).session(session);
+        let medicine = await Medicine.findOne({ name: medicineData.name }).session(session);
         if (!medicine) {
           try {
             const created = await Medicine.create([medicineData], { session });
             medicine = created[0];
-          } catch {
-            item["Status"] = "Failed: Medicine creation error";
+          } catch (error) {
+            item["Status"] = `Failed: Medicine creation error: ${error.toString()}`;
             continue;
           }
         }
 
         let expiryDate;
 
-        const expiryRaw = item["EXPIRY"];
+        const expiryRaw = item["exp"];
 
         if (typeof expiryRaw === "number") {
           // Handle Excel serial date (e.g., 45926)
@@ -79,19 +78,22 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
           continue;
         }
 
-        item["EXPIRY"] = expiryDate.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+        item["exp"] = expiryDate.toISOString().split("T")[0]; // Format: YYYY-MM-DD
 
+
+
+        console.log(item)
         // Prepare inventory data
         const inventoryData = {
           medicineId: medicine._id,
-          batchNumber: item["BATCH"],
+          batchNumber: item["batch number"],
           expiryDate: expiryDate,
-          quantityInStock: Number(item["QTY"]),
-          mrp: Number(item["MRP"]),
-          sellingPrice: Number(item["SRATE"]),
-          purchasePrice: Number(item["PURCHASE PRICE"]),
-          minimumStockLevel: Number(item["MINIMUM STOCK"]),
-          shelfLocation: item["SELF LOCATION"],
+          quantityInStock: Number(item["quantity"]),
+          mrp: Number(item["mrp"]),
+          // sellingPrice: Number(item["SRATE"]),
+          purchasePrice: Number(item["purchase price"]),
+          minimumStockLevel: Number(item["minimum stock level"]),
+          shelfLocation: item["self location"],
         };
 
         // Find or create inventory
@@ -109,8 +111,8 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
           try {
             await Inventory.create([inventoryData], { session });
             item["Status"] = "Created new inventory";
-          } catch {
-            item["Status"] = "Failed: Inventory creation error";
+          } catch (error) {
+            item["Status"] = `Failed: Inventory creation error: ${error.toString()}`;
           }
         }
       } catch (rowError) {

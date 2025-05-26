@@ -7,8 +7,6 @@ const customerSchema = new Schema(
   {
     email: {
       type: String,
-      required: false, // Not required
-      unique: true, // Email should be unique if provided
       lowercase: true, // Convert email to lowercase
       trim: true, // Trim any whitespace
     },
@@ -61,7 +59,7 @@ const customerSchema = new Schema(
 );
 
 // Pre-save hook to generate a custom _id before saving
-customerSchema.pre('save', function(next) {
+customerSchema.pre('save', function (next) {
   if (this.isNew) {
     // Pass your prefix ('MED' or any other) to the generateCustomId function
     this._id = generateCustomId('CUST'); // You can change the 'MED' to any other prefix as needed
