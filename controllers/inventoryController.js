@@ -13,7 +13,7 @@ exports.addOrUpdateInventory = async (req, res) => {
       batchNumber,
       mrp,
       purchasePrice,
-      sellingPrice,
+      // sellingPrice
       manufactureDate,
       minimumStockLevel,
       shelfLocation,
@@ -30,7 +30,7 @@ exports.addOrUpdateInventory = async (req, res) => {
     }
 
     // Check for existing inventory with the same expiryDate
-    const existingInventory = await Inventory.findOne({medicineId, batchNumber, expiryDate });
+    const existingInventory = await Inventory.findOne({ medicineId, batchNumber, expiryDate });
 
     if (existingInventory) {
       // Update existing inventory
@@ -44,7 +44,7 @@ exports.addOrUpdateInventory = async (req, res) => {
     }
 
     // Check if any inventory exists for the given medicineId
-    const existingInventoryItem = await Inventory.findOne({medicineId, batchNumber });
+    const existingInventoryItem = await Inventory.findOne({ medicineId, batchNumber });
 
     if (!existingInventoryItem) {
       // No inventory exists, create a new one
@@ -55,7 +55,7 @@ exports.addOrUpdateInventory = async (req, res) => {
         batchNumber,
         mrp,
         purchasePrice,
-        sellingPrice,
+        // sellingPrice,
         manufactureDate,
         minimumStockLevel,
         shelfLocation,
@@ -75,7 +75,7 @@ exports.addOrUpdateInventory = async (req, res) => {
       batchNumber: batchNumber || existingInventoryItem.batchNumber,
       mrp: mrp || existingInventoryItem.mrp,
       purchasePrice: purchasePrice || existingInventoryItem.purchasePrice,
-      sellingPrice: sellingPrice || existingInventoryItem.sellingPrice,
+      // sellingPrice: sellingPrice || existingInventoryItem.sellingPrice,
       manufactureDate: manufactureDate || existingInventoryItem.manufactureDate,
       minimumStockLevel: minimumStockLevel || existingInventoryItem.minimumStockLevel,
       shelfLocation: shelfLocation || existingInventoryItem.shelfLocation,
@@ -131,7 +131,7 @@ exports.getAllInventoryDetails = async (req, res) => {
               expiryDate: '$expiryDate',
               quantityInStock: '$quantityInStock',
               batchNumber: '$batchNumber',
-              sellingPrice: '$sellingPrice',
+              // sellingPrice: '$sellingPrice',
               mrp: '$mrp'
             }
           }
@@ -154,7 +154,7 @@ exports.getAllInventoryDetails = async (req, res) => {
     ]);
 
     if (!inventoryData.length) {
-      return sendResponse(res, { data:[], status: 200, message: 'No inventory available' });
+      return sendResponse(res, { data: [], status: 200, message: 'No inventory available' });
     }
 
     return sendResponse(res, { status: 200, data: inventoryData });
@@ -209,7 +209,7 @@ exports.addInventory = async (req, res) => {
       batchNumber,
       mrp,
       purchasePrice,
-      sellingPrice,
+      // sellingPrice,
       manufactureDate,
       minimumStockLevel,
       shelfLocation,
@@ -244,7 +244,7 @@ exports.addInventory = async (req, res) => {
       batchNumber,
       mrp,
       purchasePrice,
-      sellingPrice,
+      // sellingPrice,
       manufactureDate,
       minimumStockLevel,
       shelfLocation,
@@ -275,7 +275,7 @@ exports.updateInventoryById = async (req, res) => {
       batchNumber,
       mrp,
       purchasePrice,
-      sellingPrice,
+      // sellingPrice,
       manufactureDate,
       minimumStockLevel,
       shelfLocation,

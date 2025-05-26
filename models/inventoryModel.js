@@ -77,10 +77,10 @@ const inventorySchema = new mongoose.Schema({
    * Required: Yes
    * Type: Number
    */
-  sellingPrice: {
-    type: Number,
-    required: true
-  },
+  // sellingPrice: {
+  //   type: Number,
+  //   required: true
+  // },
   /**
    * Current stock level of the medicine.
    * Required: Yes
@@ -135,7 +135,7 @@ const inventorySchema = new mongoose.Schema({
 });
 
 // Pre-save hook to generate a custom _id before saving
-inventorySchema.pre('save', function(next) {
+inventorySchema.pre('save', function (next) {
   if (this.isNew) {
     // Pass your prefix ('MED' or any other) to the generateCustomId function
     this._id = generateCustomId('INVT'); // You can change the 'MED' to any other prefix as needed
@@ -147,7 +147,7 @@ inventorySchema.pre('save', function(next) {
  * Compound index to ensure unique combination of `medicineId` and `expiryDate`.
  * This helps in preventing duplicate records for the same medicine batch.
  */
-inventorySchema.index({ medicineId: 1, expiryDate: 1,batchNumber:1 }, { unique: true });
+inventorySchema.index({ medicineId: 1, expiryDate: 1, batchNumber: 1 }, { unique: true });
 
 /**
  * Inventory Model

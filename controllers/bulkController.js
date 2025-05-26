@@ -25,19 +25,19 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
     for (const item of data) {
       try {
         // Validate required fields
-        if (!item["ITEM NAME"] || !item["EXPIRY"] || !item["QTY"]) {
+        if (!item["name"] || !item["exp"] || !item["quantity"]) {
           item["Status"] = "Failed: Missing required fields";
           continue;
         }
 
         // Prepare medicine data
         const medicineData = {
-          name: item["ITEM NAME"],
-          genericName: item["GENERIC NAME"],
-          form: item["FORM"],
-          strength: item["STRENGTH"],
-          unit: item["UNIT"],
-          prescriptionRequired: item["PRESCRIPTION"]==='yes'?true:false,
+          name: item["name"],
+          // genericName: item["GENERIC NAME"],
+          form: item["form"],
+          strength: item["strength"],
+          unit: item["unit"],
+          prescriptionRequired: item["prescription"] === 'yes' ? true : false,
           medicineCode: `MED${Math.floor(10000 + Math.random() * 90000)}`,
         };
 
@@ -54,7 +54,7 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
         }
 
         // Parse expiry date
-        const expiryDate = new Date(item["EXPIRY"]);
+        const expiryDate = new Date(item["exp"]);
         if (isNaN(expiryDate)) {
           item["Status"] = "Failed: Invalid expiry date";
           continue;
@@ -63,14 +63,14 @@ exports.bulkUploadMedicineInventory = async (req, res) => {
         // Prepare inventory data
         const inventoryData = {
           medicineId: medicine._id,
-          batchNumber: item["BATCH"],
+          batchNumber: item["batch number"],
           expiryDate: expiryDate,
-          quantityInStock: Number(item["QTY"]),
-          mrp: Number(item["MRP"]),
-          sellingPrice: Number(item["SRATE"]),
-          purchasePrice: Number(item["PURCHASE PRICE"]),
-          minimumStockLevel: Number(item["MINIMUM STOCK"]),
-          shelfLocation: item["SELF LOCATION"],
+          quantityInStock: Number(item["quantity"]),
+          mrp: Number(item["mrp"]),
+          // sellingPrice: Number(item["SRATE"]),
+          purchasePrice: Number(item["purchase price"]),
+          minimumStockLevel: Number(item["minimum stock level"]),
+          shelfLocation: item["self location"],
         };
 
         // Find or create inventory

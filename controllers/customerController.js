@@ -7,7 +7,7 @@ const sendResponse = require('../utils/response.formatter');
 const getAllCustomers = async (req, res) => {
   try {
     const customers = await Customer.find()
-      .populate('invoices') // Populate the invoices with the full Stock details
+      .populate('invoices').sort({ createdAt: -1 }) // Populate the invoices with the full Stock details
       .exec(); // Execute the query
 
     if (!customers || customers.length === 0) {
@@ -94,7 +94,7 @@ const getCustomerPurchaseHistory = async (req, res) => {
       return sendResponse(res, { status: 404, message: 'Customer not found' });
     }
 
-   
+
 
     // Send the customer details and updated invoices
     return sendResponse(res, {
