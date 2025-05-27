@@ -28,7 +28,12 @@ const app = express();
 app.use(helmet());
 
 // Enable CORS
-app.use(cors());
+app.use(cors(
+  {
+    origin: ["https://chikit360-frontend.thundergits.com"],
+    credentials: true
+  }
+));
 
 // Middleware for parsing JSON bodies
 app.use(bodyParser.json());
