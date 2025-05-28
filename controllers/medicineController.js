@@ -422,13 +422,17 @@ medicineController.expirationAlerts = async (req, res) => {
 
 medicineController.getAvailableMedicines = async (req, res) => {
     try {
-        const { name, page = 1, limit = 10 } = req.query;
+        const { name, page = 1, limit = 5 } = req.query;
 
-        // Calculate skip value for pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
+        const matchStage = {
+            $match: {
+                totalStock: { $gte: 1 },
+                ...(name ? { name: { $regex: name, $options: 'i' } } : {})
+            }
+        };
 
-        // Perform aggregation to fetch medicines with available stock and MRP
-        const medicines = await Medicine.aggregate([
+        const aggregationPipeline = [
             {
                 $lookup: {
                     from: 'inventories',
@@ -440,69 +444,45 @@ medicineController.getAvailableMedicines = async (req, res) => {
             {
                 $addFields: {
                     totalStock: { $sum: '$inventory.quantityInStock' },
-                    sellingPrice: { $max: '$inventory.sellingPrice' }, // Extract highest MRP if multiple batches exist
-                    mrp: { $max: '$inventory.mrp' }, // Extract highest MRP if multiple batches exist
-                    purchasePrice: { $max: '$inventory.purchasePrice' } // Extract highest MRP if multiple batches exist
+                    sellingPrice: { $max: '$inventory.sellingPrice' },
+                    mrp: { $max: '$inventory.mrp' },
+                    purchasePrice: { $max: '$inventory.purchasePrice' }
                 }
             },
-            {
-                $match: {
-                    totalStock: { $gte: 1 },
-                    ...(name ? { name: { $regex: name, $options: 'i' } } : {})
-                }
-            },
+            matchStage,
             {
                 $sort: name ? {} : { name: 1 }
             },
             {
-                $skip: skip
-            },
-            {
-                $limit: parseInt(limit)
-            },
-            {
-                $project: {
-                    _id: 1,
-                    name: 1,
-                    totalStock: 1,
-                    sellingPrice: 1,
-                    mrp: 1,
-                    purchasePrice: 1
+                $facet: {
+                    data: [
+                        { $skip: skip },
+                        { $limit: parseInt(limit) },
+                        {
+                            $project: {
+                                _id: 1,
+                                name: 1,
+                                totalStock: 1,
+                                sellingPrice: 1,
+                                mrp: 1,
+                                purchasePrice: 1
+                            }
+                        }
+                    ],
+                    totalCount: [
+                        { $count: 'count' }
+                    ]
                 }
             }
-        ]);
+        ];
 
-        // Get the total count of matching medicines
-        const totalMedicines = await Medicine.aggregate([
-            {
-                $lookup: {
-                    from: 'inventories',
-                    localField: '_id',
-                    foreignField: 'medicineId',
-                    as: 'inventory'
-                }
-            },
-            {
-                $addFields: {
-                    totalStock: { $sum: '$inventory.quantityInStock' }
-                }
-            },
-            {
-                $match: {
-                    totalStock: { $gte: 1 },
-                    ...(name ? { name: { $regex: name, $options: 'i' } } : {})
-                }
-            },
-            {
-                $count: 'totalMedicines'
-            }
-        ]);
-
-        const totalCount = totalMedicines[0]?.totalMedicines || 0;
+        const result = await Medicine.aggregate(aggregationPipeline);
+        const medicines = result[0].data;
+        const totalCount = result[0].totalCount[0]?.count || 0;
 
         return sendResponse(res, {
             data: medicines,
-            totalMedicines: totalCount,
+            totalCount: totalCount,
             currentPage: parseInt(page),
             totalPages: Math.ceil(totalCount / limit),
             status: 200
@@ -517,6 +497,7 @@ medicineController.getAvailableMedicines = async (req, res) => {
         });
     }
 };
+
 
 
 module.exports = medicineController;

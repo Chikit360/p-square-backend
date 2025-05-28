@@ -30,7 +30,7 @@ app.use(helmet());
 // Enable CORS
 app.use(cors(
   {
-    origin: ["https://chikit360-frontend.thundergits.com"],
+    origin: ["https://chikit360-frontend.thundergits.com", "http://localhost:5173"],
     credentials: true
   }
 ));

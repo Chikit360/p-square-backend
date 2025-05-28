@@ -1,6 +1,6 @@
 const sendResponse = (
   res,
-  { data = null, status = 200, message = 'Success', error = false } = {}
+  { data = null, totalCount = 0, currentPage = 0, totalPages = 0, status = 200, message = 'Success', error = false } = {}
 ) => {
   const isProduction = process.env.NODE_ENV === 'production';
 
@@ -13,6 +13,9 @@ const sendResponse = (
     status,
     message,
     data,
+    totalPages,
+    currentPage,
+    totalCount,
     error
   });
 };
