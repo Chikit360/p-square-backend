@@ -422,9 +422,8 @@ medicineController.expirationAlerts = async (req, res) => {
 
 medicineController.getAvailableMedicines = async (req, res) => {
     try {
-        const { name, page = 1, limit = 5 } = req.query;
+        const { name } = req.query;
 
-        const skip = (parseInt(page) - 1) * parseInt(limit);
         const matchStage = {
             $match: {
                 totalStock: { $gte: 1 },
@@ -454,37 +453,22 @@ medicineController.getAvailableMedicines = async (req, res) => {
                 $sort: name ? {} : { name: 1 }
             },
             {
-                $facet: {
-                    data: [
-                        { $skip: skip },
-                        { $limit: parseInt(limit) },
-                        {
-                            $project: {
-                                _id: 1,
-                                name: 1,
-                                totalStock: 1,
-                                sellingPrice: 1,
-                                mrp: 1,
-                                purchasePrice: 1
-                            }
-                        }
-                    ],
-                    totalCount: [
-                        { $count: 'count' }
-                    ]
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    totalStock: 1,
+                    sellingPrice: 1,
+                    mrp: 1,
+                    purchasePrice: 1
                 }
             }
         ];
 
-        const result = await Medicine.aggregate(aggregationPipeline);
-        const medicines = result[0].data;
-        const totalCount = result[0].totalCount[0]?.count || 0;
+        const medicines = await Medicine.aggregate(aggregationPipeline);
 
         return sendResponse(res, {
             data: medicines,
-            totalCount: totalCount,
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(totalCount / limit),
+            totalCount: medicines.length,
             status: 200
         });
 
@@ -497,6 +481,7 @@ medicineController.getAvailableMedicines = async (req, res) => {
         });
     }
 };
+
 
 
 
